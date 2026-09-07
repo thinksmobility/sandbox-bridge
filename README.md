@@ -78,6 +78,20 @@ function PriceCard() {
 }
 ```
 
+Demo kendi store'unu (booking/kasko form state'i vb.) sıfırlamak isterse
+`onReset`/`onInit` kullanır; `resetCount` `key={resetCount}` remount deseni
+için uygundur:
+
+```tsx
+<SandboxProvider
+  /* ... */
+  onInit={(payload) => hydrateFromSnapshot(payload.snapshot)}
+  onReset={() => bookingStore.getState().reset()}
+>
+  <RootScreen key={useSandbox().resetCount} />
+</SandboxProvider>
+```
+
 `SandboxSelectable` web'de sarmaladığı öğeye `data-sb-screen`/`data-sb-component`
 basar ve feedback modunda tıklamayı `sandbox:component-selected` mesajına
 çevirir. **React Native ağacında** (`typeof document === 'undefined'`) hiçbir

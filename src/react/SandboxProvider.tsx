@@ -13,6 +13,14 @@ export interface SandboxProviderProps {
   manifestDigest: string
   screens: number
   children: ReactNode
+  /** `sandbox:init` alınıp handshake başarıyla tamamlandığında çağrılır. */
+  onInit?: (payload: SandboxPayloadMap['sandbox:init']) => void
+  /**
+   * `sandbox:reset` alındığında, iç snapshot temizlendikten SONRA çağrılır —
+   * demo kendi store'unu (ör. booking/kasko form state'i) sıfırlamak için
+   * kullanır. `resetCount`'u da bkz. (`key={resetCount}` remount deseni).
+   */
+  onReset?: () => void
 }
 
 export interface SandboxContextValue {
@@ -23,6 +31,8 @@ export interface SandboxContextValue {
   feedbackMode: boolean
   snapshot: Record<string, unknown> | null
   highlightedComponentId: string | null
+  /** Her `sandbox:reset`'te +1 artar — demo `key={resetCount}` remount deseninde kullanabilir. */
+  resetCount: number
   sendNavigate: (payload: SandboxPayloadMap['sandbox:navigate']) => void
   sendComponentSelected: (payload: SandboxPayloadMap['sandbox:component-selected']) => void
   sendEvent: (payload: SandboxPayloadMap['sandbox:event']) => void
@@ -49,7 +59,9 @@ export function SandboxProvider({
   allowedOrigins,
   manifestDigest,
   screens,
-  children
+  children,
+  onInit,
+  onReset
 }: SandboxProviderProps): React.JSX.Element {
   const [ready, setReady] = useState(false)
   const [session, setSession] = useState<SandboxSessionInfo | null>(null)
@@ -58,9 +70,16 @@ export function SandboxProvider({
   const [feedbackMode, setFeedbackMode] = useState(false)
   const [snapshot, setSnapshot] = useState<Record<string, unknown> | null>(null)
   const [highlightedComponentId, setHighlightedComponentId] = useState<string | null>(null)
+  const [resetCount, setResetCount] = useState(0)
 
   const targetOriginRef = useRef<string | null>(null)
   const sessionIdRef = useRef<string>('')
+  // Callback'ler ref üzerinden tutulur: her render'da güncellenir ama
+  // `handleMessage` useEffect'i yeniden bağlanmaz (listener sabit kalır).
+  const onInitRef = useRef(onInit)
+  onInitRef.current = onInit
+  const onResetRef = useRef(onReset)
+  onResetRef.current = onReset
 
   const post = useCallback(
     <T extends keyof SandboxPayloadMap>(type: T, payload: SandboxPayloadMap[T]) => {
@@ -101,6 +120,7 @@ export function SandboxProvider({
           setFeedbackMode(message.payload.feedbackMode)
           setSnapshot(message.payload.snapshot ?? null)
           setReady(true)
+          onInitRef.current?.(message.payload)
           break
         }
         case 'sandbox:feedback-mode':
@@ -117,6 +137,8 @@ export function SandboxProvider({
           break
         case 'sandbox:reset':
           setSnapshot(null)
+          setResetCount((count) => count + 1)
+          onResetRef.current?.()
           break
         default:
           break
@@ -156,13 +178,14 @@ export function SandboxProvider({
       feedbackMode,
       snapshot,
       highlightedComponentId,
+      resetCount,
       sendNavigate: (payload) => post('sandbox:navigate', payload),
       sendComponentSelected: (payload) => post('sandbox:component-selected', payload),
       sendEvent: (payload) => post('sandbox:event', payload),
       sendStateSync: (payload) => post('sandbox:state-sync', payload),
       sendError: (payload) => post('sandbox:error', payload)
     }),
-    [ready, session, persona, scenario, feedbackMode, snapshot, highlightedComponentId, post]
+    [ready, session, persona, scenario, feedbackMode, snapshot, highlightedComponentId, resetCount, post]
   )
 
   return <SandboxContext.Provider value={value}>{children}</SandboxContext.Provider>

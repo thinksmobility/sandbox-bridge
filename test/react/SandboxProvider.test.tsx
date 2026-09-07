@@ -5,13 +5,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SandboxProvider, useSandbox } from '../../src/react/SandboxProvider.js'
 
 function Consumer(): React.JSX.Element {
-  const { ready, session, feedbackMode, persona } = useSandbox()
+  const { ready, session, feedbackMode, persona, resetCount } = useSandbox()
   return (
     <div>
       <span data-testid="ready">{String(ready)}</span>
       <span data-testid="session-id">{session?.id ?? ''}</span>
       <span data-testid="feedback-mode">{String(feedbackMode)}</span>
       <span data-testid="persona">{persona ?? ''}</span>
+      <span data-testid="reset-count">{resetCount}</span>
     </div>
   )
 }
@@ -237,6 +238,107 @@ describe('SandboxProvider', () => {
     send('sandbox:scenario', { id: 'gecikme' })
     send('sandbox:highlight', { componentId: 'cmp-1' })
     send('sandbox:reset', {})
+  })
+
+  it('onInit, sandbox:init alındığında payload ile çağrılır', () => {
+    const onInit = vi.fn()
+    render(
+      <SandboxProvider
+        demoId="voltgo"
+        allowedOrigins={['https://hello.tmobstudio.ai']}
+        manifestDigest="d"
+        screens={1}
+        onInit={onInit}
+      >
+        <Consumer />
+      </SandboxProvider>
+    )
+
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          origin: 'https://hello.tmobstudio.ai',
+          source: fakeParent as unknown as Window,
+          data: {
+            v: 1,
+            demoId: 'voltgo',
+            sessionId: '',
+            msgId: 'm-init',
+            ts: 1,
+            type: 'sandbox:init',
+            payload: {
+              session: { id: 'sess-1', expiresAt: '2026-09-08T00:00:00.000Z' },
+              feedbackMode: false,
+              allowedOrigin: 'https://hello.tmobstudio.ai'
+            }
+          }
+        })
+      )
+    })
+
+    expect(onInit).toHaveBeenCalledTimes(1)
+    expect(onInit.mock.calls[0]?.[0]).toMatchObject({ session: { id: 'sess-1' } })
+  })
+
+  it('onReset, sandbox:reset alındığında (iç snapshot temizlendikten sonra) çağrılır; resetCount artar', () => {
+    const onReset = vi.fn()
+    render(
+      <SandboxProvider
+        demoId="voltgo"
+        allowedOrigins={['https://hello.tmobstudio.ai']}
+        manifestDigest="d"
+        screens={1}
+        onReset={onReset}
+      >
+        <Consumer />
+      </SandboxProvider>
+    )
+
+    expect(screen.getByTestId('reset-count').textContent).toBe('0')
+
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          origin: 'https://hello.tmobstudio.ai',
+          source: fakeParent as unknown as Window,
+          data: { v: 1, demoId: 'voltgo', sessionId: 'sess-1', msgId: 'm-r1', ts: 1, type: 'sandbox:reset', payload: {} }
+        })
+      )
+    })
+    expect(onReset).toHaveBeenCalledTimes(1)
+    expect(screen.getByTestId('reset-count').textContent).toBe('1')
+
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          origin: 'https://hello.tmobstudio.ai',
+          source: fakeParent as unknown as Window,
+          data: { v: 1, demoId: 'voltgo', sessionId: 'sess-1', msgId: 'm-r2', ts: 2, type: 'sandbox:reset', payload: {} }
+        })
+      )
+    })
+    expect(onReset).toHaveBeenCalledTimes(2)
+    expect(screen.getByTestId('reset-count').textContent).toBe('2')
+  })
+
+  it('onInit/onReset verilmeden reset gelirse hata fırlatmaz (opsiyonel callback)', () => {
+    render(
+      <SandboxProvider demoId="voltgo" allowedOrigins={['https://hello.tmobstudio.ai']} manifestDigest="d" screens={1}>
+        <Consumer />
+      </SandboxProvider>
+    )
+    expect(() => {
+      act(() => {
+        window.dispatchEvent(
+          new MessageEvent('message', {
+            origin: 'https://hello.tmobstudio.ai',
+            source: fakeParent as unknown as Window,
+            data: { v: 1, demoId: 'voltgo', sessionId: 'sess-1', msgId: 'm-r', ts: 1, type: 'sandbox:reset', payload: {} }
+          })
+        )
+      })
+    }).not.toThrow()
+    expect(screen.getByTestId('reset-count').textContent).toBe('1')
   })
 
   it('useSandbox, SandboxProvider dışında kullanılırsa fırlatır', () => {
