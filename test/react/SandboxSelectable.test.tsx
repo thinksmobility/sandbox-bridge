@@ -164,6 +164,6 @@ describe('SandboxSelectable (native no-op)', () => {
       children: 'hello-native'
     })
 
-    expect(element.props.children).toBe('hello-native')
+    expect((element.props as { children: unknown }).children).toBe('hello-native')
   })
 })

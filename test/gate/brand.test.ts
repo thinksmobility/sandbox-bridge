@@ -46,4 +46,20 @@ describe('gate/rules/brand — extraDenyTerms (somut marka isimleri BURADAN ekle
     const findings = scanBrand(content, 'src/copy.ts', ['AcmeCorp', 'ExampleBank'])
     expect(findings.map((f) => f.line)).toEqual([1, 3])
   })
+
+  it('≤4 karakterlik kısa terim, minified kodda başka bir tanımlayıcının içine gömülüyse eşleşmez', () => {
+    const findings = scanBrand('function pushAbcDiff(){}', 'dist/entry.js', ['abc'])
+    expect(findings).toHaveLength(0)
+  })
+
+  it('≤4 karakterlik kısa terim tek başına/sınırlı geçtiğinde eşleşir', () => {
+    expect(scanBrand('const abc = brand', 'a.ts', ['abc'])).toHaveLength(1)
+    expect(scanBrand("id: 'abc-item'", 'a.ts', ['abc'])).toHaveLength(1)
+    expect(scanBrand('(abc)', 'a.ts', ['abc'])).toHaveLength(1)
+  })
+
+  it('5+ karakterlik terimler için mevcut substring davranışı korunur (birleşik geçebilir)', () => {
+    const findings = scanBrand('brandnameSuffix', 'a.ts', ['brandname'])
+    expect(findings).toHaveLength(1)
+  })
 })

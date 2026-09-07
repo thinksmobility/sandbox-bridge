@@ -32,6 +32,43 @@ function maskExcerpt(line: string, matchIndex: number, matchLength: number): str
   return `${start > 0 ? '…' : ''}${before}${'*'.repeat(matchLength)}${after}${end < line.length ? '…' : ''}`
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * ≤4 karakterlik alfasayısal terimler (ör. 3 harfli kısaltmalar) minified
+ * kodda `pushDiff` gibi metod/tanımlayıcı adları içinde substring olarak
+ * yanlış pozitif üretiyordu (gerçek olay). Bu uzunluk ve altındaki terimler
+ * için sınır kontrolü (`[a-z0-9]` komşusu olmama) uygulanır; daha uzun
+ * terimler (marka adları genelde birleşik/bitişik geçebilir) mevcut
+ * substring eşleşmesini korur.
+ */
+const SHORT_TERM_MAX_LENGTH = 4
+
+function findMatches(comparable: string, term: string): Array<{ index: number }> {
+  if (term.length <= SHORT_TERM_MAX_LENGTH) {
+    const pattern = new RegExp(`(?<![a-z0-9])${escapeRegExp(term)}(?![a-z0-9])`, 'g')
+    const matches: Array<{ index: number }> = []
+    let match: RegExpExecArray | null
+    while ((match = pattern.exec(comparable)) !== null) {
+      matches.push({ index: match.index })
+      if (match[0].length === 0) pattern.lastIndex += 1
+    }
+    return matches
+  }
+
+  const matches: Array<{ index: number }> = []
+  let searchIndex = 0
+  while (searchIndex <= comparable.length) {
+    const matchIndex = comparable.indexOf(term, searchIndex)
+    if (matchIndex === -1) break
+    matches.push({ index: matchIndex })
+    searchIndex = matchIndex + term.length
+  }
+  return matches
+}
+
 /**
  * Verilen içerikte satır satır marka deny-list eşleşmesi arar. `extraDenyTerms`
  * demo-özel somut marka isimlerinin (kaynak müşteri adları vb.) eklendiği
@@ -47,17 +84,13 @@ export function scanBrand(content: string, filePath: string, extraDenyTerms: rea
   lines.forEach((line, index) => {
     const comparable = toComparable(line)
     for (const term of terms) {
-      let searchIndex = 0
-      while (searchIndex <= comparable.length) {
-        const matchIndex = comparable.indexOf(term, searchIndex)
-        if (matchIndex === -1) break
+      for (const { index: matchIndex } of findMatches(comparable, term)) {
         findings.push({
           rule: 'brand-denylist',
           file: filePath,
           line: index + 1,
           excerpt: maskExcerpt(line, matchIndex, term.length)
         })
-        searchIndex = matchIndex + term.length
       }
     }
   })

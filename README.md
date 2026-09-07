@@ -30,6 +30,9 @@ Kurulum sonrası `prepare` script'i paketi build eder (git bağımlılıkları i
 standart mekanizma). **pnpm** kullanıyorsanız lifecycle script'lerin
 çalışması için gerekirse `pnpm approve-builds` ile onaylayın.
 
+`react` **peer dependency**'dir (`>=18 <20`, opsiyonel) ve asla bundle
+edilmez — kendi `react`'inizi getirirsiniz, çift kopya/`Invalid hook call` riski oluşmaz.
+
 ## Giriş noktaları
 
 | Import | İçerik |

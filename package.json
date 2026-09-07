@@ -1,6 +1,6 @@
 {
   "name": "@tmob/sandbox-bridge",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "B2C sat\u0131\u015f sandbox demolar\u0131 i\u00e7in iframe k\u00f6pr\u00fc protokol\u00fc, React yard\u0131mc\u0131lar\u0131, manifest \u015femas\u0131 ve marka/s\u0131r/PII tarama kap\u0131s\u0131.",
   "type": "module",
   "license": "UNLICENSED",
@@ -9,20 +9,44 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/protocol/index.d.ts",
-      "import": "./dist/protocol/index.js"
+      "import": {
+        "types": "./dist/protocol/index.d.ts",
+        "default": "./dist/protocol/index.js"
+      },
+      "require": {
+        "types": "./dist/protocol/index.d.cts",
+        "default": "./dist/protocol/index.cjs"
+      }
     },
     "./react": {
-      "types": "./dist/react/index.d.ts",
-      "import": "./dist/react/index.js"
+      "import": {
+        "types": "./dist/react/index.d.ts",
+        "default": "./dist/react/index.js"
+      },
+      "require": {
+        "types": "./dist/react/index.d.cts",
+        "default": "./dist/react/index.cjs"
+      }
     },
     "./manifest": {
-      "types": "./dist/manifest/index.d.ts",
-      "import": "./dist/manifest/index.js"
+      "import": {
+        "types": "./dist/manifest/index.d.ts",
+        "default": "./dist/manifest/index.js"
+      },
+      "require": {
+        "types": "./dist/manifest/index.d.cts",
+        "default": "./dist/manifest/index.cjs"
+      }
     },
     "./gate": {
-      "types": "./dist/gate/index.d.ts",
-      "import": "./dist/gate/index.js"
+      "import": {
+        "types": "./dist/gate/index.d.ts",
+        "default": "./dist/gate/index.js"
+      },
+      "require": {
+        "types": "./dist/gate/index.d.cts",
+        "default": "./dist/gate/index.cjs"
+      }
     }
   },
   "bin": {
@@ -42,7 +66,7 @@
     "gate:self": "node dist/gate/bin.js --src . --out dist --report gate-report.json --config sandbox-gate.config.json"
   },
   "peerDependencies": {
-    "react": ">=18"
+    "react": ">=18 <20"
   },
   "peerDependenciesMeta": {
     "react": {
@@ -55,11 +79,11 @@
   "devDependencies": {
     "@testing-library/react": "^16.0.1",
     "@types/node": "^22.10.2",
-    "@types/react": "^18.3.12",
+    "@types/react": "^19.1.10",
     "@vitest/coverage-v8": "^2.1.8",
     "jsdom": "^25.0.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
     "tsup": "^8.3.5",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
