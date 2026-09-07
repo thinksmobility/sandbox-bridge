@@ -47,41 +47,55 @@ function buildExcerpt(line: string, matchIndex: number, matchLength: number, rep
   return `${start > 0 ? '…' : ''}${before}${replacement}${after}${end < line.length ? '…' : ''}`
 }
 
+export interface ScanPiiOptions {
+  /**
+   * false ise TC/telefon (sayısal) kuralları atlanır — e-posta kuralı
+   * etkilenmez. Minified/bundled `.js` çıktısında font hash'leri, bezier
+   * easing katsayıları ve worklet hash'leri TC/telefon kalıplarıyla
+   * çakışabiliyor (gerçek olay); bu tür dosyalarda `scanDirectory` bunu
+   * otomatik `false` geçer (bkz. `scanner.ts` satır-uzunluğu sezgiseli).
+   */
+  includeNumericRules?: boolean
+}
+
 /**
  * Kişisel veri kurallarını tarar. Yanlış pozitif tuzağına dikkat: ham
  * regex yerine TC checksum doğrulaması, telefon rezerve aralığı ve e-posta
  * izinli domain listesi kullanılır — böylece seed verisi serbest kalırken
  * gerçek görünen veri yakalanır.
  */
-export function scanPii(content: string, filePath: string): Finding[] {
+export function scanPii(content: string, filePath: string, options: ScanPiiOptions = {}): Finding[] {
+  const includeNumericRules = options.includeNumericRules ?? true
   const findings: Finding[] = []
   const lines = content.split(/\r?\n/)
 
   lines.forEach((line, index) => {
     let match: RegExpExecArray | null
 
-    TC_CANDIDATE_PATTERN.lastIndex = 0
-    while ((match = TC_CANDIDATE_PATTERN.exec(line)) !== null) {
-      if (isValidTcChecksum(match[0])) {
-        findings.push({
-          rule: 'pii-tc-kimlik',
-          file: filePath,
-          line: index + 1,
-          excerpt: buildExcerpt(line, match.index, match[0].length, maskDigits(match[0]))
-        })
+    if (includeNumericRules) {
+      TC_CANDIDATE_PATTERN.lastIndex = 0
+      while ((match = TC_CANDIDATE_PATTERN.exec(line)) !== null) {
+        if (isValidTcChecksum(match[0])) {
+          findings.push({
+            rule: 'pii-tc-kimlik',
+            file: filePath,
+            line: index + 1,
+            excerpt: buildExcerpt(line, match.index, match[0].length, maskDigits(match[0]))
+          })
+        }
       }
-    }
 
-    PHONE_CANDIDATE_PATTERN.lastIndex = 0
-    while ((match = PHONE_CANDIDATE_PATTERN.exec(line)) !== null) {
-      const normalized = match[0].replace(/\D/g, '').slice(-10)
-      if (!RESERVED_PHONE_PATTERN.test(normalized)) {
-        findings.push({
-          rule: 'pii-phone',
-          file: filePath,
-          line: index + 1,
-          excerpt: buildExcerpt(line, match.index, match[0].length, maskDigits(normalized))
-        })
+      PHONE_CANDIDATE_PATTERN.lastIndex = 0
+      while ((match = PHONE_CANDIDATE_PATTERN.exec(line)) !== null) {
+        const normalized = match[0].replace(/\D/g, '').slice(-10)
+        if (!RESERVED_PHONE_PATTERN.test(normalized)) {
+          findings.push({
+            rule: 'pii-phone',
+            file: filePath,
+            line: index + 1,
+            excerpt: buildExcerpt(line, match.index, match[0].length, maskDigits(normalized))
+          })
+        }
       }
     }
 

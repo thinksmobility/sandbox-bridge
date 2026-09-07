@@ -77,4 +77,12 @@ describe('gate/scanner scanDirectory', () => {
       expect(finding.file.startsWith('/')).toBe(false)
     }
   })
+
+  it('minified bundle\'da (>1000 karakterlik satır) PII sayısal kuralları devre dışı kalır, marka+credential aynen çalışır', () => {
+    const result = scanDirectory('test/fixtures/gate/minified-bundle')
+    const rules = result.findings.map((f) => f.rule)
+    expect(rules).toContain('brand-denylist')
+    expect(rules).toContain('credential-aws-access-key')
+    expect(rules).not.toContain('pii-tc-kimlik')
+  })
 })

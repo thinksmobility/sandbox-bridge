@@ -6,7 +6,8 @@ export default defineConfig([
       'protocol/index': 'src/protocol/index.ts',
       'manifest/index': 'src/manifest/index.ts',
       'gate/index': 'src/gate/index.ts',
-      'gate/cli': 'src/gate/cli.ts'
+      'gate/cli': 'src/gate/cli.ts',
+      'gate/bin': 'src/gate/bin.ts'
     },
     format: ['esm'],
     dts: true,

@@ -40,6 +40,9 @@ const BINARY_EXTENSIONS = new Set([
 
 const DEFAULT_MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
 
+/** Bu uzunluğu aşan bir satır varsa dosya "minified/bundled" sayılır. */
+const MINIFIED_LINE_LENGTH_THRESHOLD = 1000
+
 export interface ScannerOptions {
   /** Marka deny-list'ine eklenecek ek terimler (allow-list istisnası DEĞİL). */
   extraDenyTerms?: readonly string[]
@@ -214,9 +217,14 @@ export function scanDirectory(root: string, options: ScannerOptions = {}): ScanR
 
     const content = buffer.toString('utf8')
     scannedFiles += 1
+    // Minified/bundled çıktıda (tek satırda binlerce karakter — font hash,
+    // bezier easing katsayısı, worklet hash vb.) TC/telefon sayısal
+    // kuralları yanlış pozitif üretiyor (gerçek olay). Marka ve credential
+    // kuralları böyle dosyalarda da aynen uygulanmaya devam eder.
+    const isMinifiedLike = content.split('\n').some((line) => line.length > MINIFIED_LINE_LENGTH_THRESHOLD)
     findings.push(...scanBrand(content, relativePath, options.extraDenyTerms))
     findings.push(...scanCredentials(content, relativePath))
-    findings.push(...scanPii(content, relativePath))
+    findings.push(...scanPii(content, relativePath, { includeNumericRules: !isMinifiedLike }))
   }
 
   return { findings, scannedFiles }

@@ -83,6 +83,30 @@ describe('gate/cli runGate', () => {
     expect(exitCode).toBe(1)
   })
 
+  it('var olmayan --src dizini için sessizce çıkmaz: exit 2, rapor yazmaz', () => {
+    const reportPath = join(workDir, 'gate-report.json')
+    const exitCode = runGate(['--src', join(workDir, 'does-not-exist'), '--report', reportPath])
+    expect(exitCode).toBe(2)
+    expect(existsSync(reportPath)).toBe(false)
+  })
+
+  it('var olmayan --out dizini için sessizce çıkmaz: exit 2', () => {
+    const reportPath = join(workDir, 'gate-report.json')
+    const exitCode = runGate(['--src', CLEAN_REPO, '--out', join(workDir, 'does-not-exist'), '--report', reportPath])
+    expect(exitCode).toBe(2)
+  })
+
+  it('0 dosya taranırsa (boş dizin) sessizce PASS gibi görünmez: exit 2', () => {
+    const emptyDir = join(workDir, 'empty')
+    mkdirSync(emptyDir, { recursive: true })
+    const reportPath = join(workDir, 'gate-report.json')
+    const exitCode = runGate(['--src', emptyDir, '--report', reportPath])
+    expect(exitCode).toBe(2)
+    // Denetim izi için rapor yine de yazılır, ama exit code PASS değildir.
+    const report = JSON.parse(readFileSync(reportPath, 'utf8')) as GateReport
+    expect(report.scannedFiles).toBe(0)
+  })
+
   it('--help ile 0 döner ve rapor dosyası yazmaz', () => {
     const reportPath = join(workDir, 'gate-report.json')
     const exitCode = runGate(['--help', '--report', reportPath])

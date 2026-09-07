@@ -69,3 +69,20 @@ describe('gate/rules/pii — e-posta', () => {
     expect(findings[0]?.excerpt).not.toContain('deniz.yilmaz@gmail.com')
   })
 })
+
+describe('gate/rules/pii — includeNumericRules:false (minified bundle muafiyeti)', () => {
+  it('checksum geçerli TC ve rezerve-dışı telefon numarasını atlar', () => {
+    const content = 'tc: 12345678950 tel: +90 532 123 45 67'
+    expect(scanPii(content, 'dist/entry.js', { includeNumericRules: false })).toHaveLength(0)
+  })
+
+  it('e-posta kuralı etkilenmez (yalnızca sayısal kurallar kapanır)', () => {
+    const findings = scanPii('mail: deniz.yilmaz@gmail.com', 'dist/entry.js', { includeNumericRules: false })
+    expect(findings).toHaveLength(1)
+    expect(findings[0]?.rule).toBe('pii-email')
+  })
+
+  it('varsayılan (parametre verilmezse) sayısal kurallar açıktır', () => {
+    expect(scanPii('tc: 12345678950', 'a.ts')).toHaveLength(1)
+  })
+})

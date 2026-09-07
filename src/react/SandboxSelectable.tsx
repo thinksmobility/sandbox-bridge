@@ -1,3 +1,5 @@
+'use client'
+
 import { useCallback } from 'react'
 import type { KeyboardEvent, MouseEvent, ReactElement, ReactNode } from 'react'
 import { useSandbox } from './SandboxProvider.js'

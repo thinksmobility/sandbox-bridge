@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { buildReport, formatReportJson } from './report.js'
@@ -117,6 +116,15 @@ export function runGate(argv: readonly string[]): number {
   }
 
   const srcRoot = resolve(options.src)
+  if (!existsSync(srcRoot)) {
+    logError(`sandbox-gate: HATA — kaynak dizin bulunamadı: ${options.src}`)
+    return 2
+  }
+  if (options.out && !existsSync(resolve(options.out))) {
+    logError(`sandbox-gate: HATA — build çıktı dizini bulunamadı: ${options.out}`)
+    return 2
+  }
+
   const srcResult = scanDirectory(srcRoot, scannerOptions)
   let findings: Finding[] = prefixFindings(srcResult.findings, options.src)
   let scannedFiles = srcResult.scannedFiles
@@ -126,6 +134,15 @@ export function runGate(argv: readonly string[]): number {
     const outResult = scanDirectory(outRoot, scannerOptions)
     findings = [...findings, ...prefixFindings(outResult.findings, options.out)]
     scannedFiles += outResult.scannedFiles
+  }
+
+  if (scannedFiles === 0) {
+    // Sessizce PASS gibi görünmesin: boş/yanlış dizin ya da her şeyin
+    // atlanması (lockfile/binary/large-file) fark edilmeden geçmemeli.
+    logError('sandbox-gate: HATA — 0 dosya tarandı (dizin boş mu, hepsi atlandı mı?)')
+    const emptyReport = buildReport(findings, scannedFiles)
+    writeFileSync(resolve(options.report), formatReportJson(emptyReport), 'utf8')
+    return 2
   }
 
   const report = buildReport(findings, scannedFiles)
@@ -144,9 +161,4 @@ export function runGate(argv: readonly string[]): number {
     logError(`  … ve ${report.findings.length - 20} bulgu daha (${options.report} içinde tamamı)`)
   }
   return 1
-}
-
-const isMainModule = typeof process.argv[1] === 'string' && import.meta.url === `file://${process.argv[1]}`
-if (isMainModule) {
-  process.exit(runGate(process.argv.slice(2)))
 }
