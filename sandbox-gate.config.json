@@ -1,0 +1,5 @@
+{
+  "extraDenyTerms": [],
+  "ignore": ["src/gate", "gate", "test", "templates/expo-kit/dist", "templates/expo-kit/ios", "templates/expo-kit/android"],
+  "skipDirs": []
+}

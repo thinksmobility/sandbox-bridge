@@ -1,0 +1,7 @@
+{
+  "$comment": "Bunu demo reposunun köküne 'sandbox-gate.config.json' olarak kopyalayın ve extraDenyTerms'i kaynak marka isimleriyle doldurun. Bu dosya kaynak marka adı İÇERMEZ — somut liste demo reposunun kendi (gerekirse .gitignore'a alınabilen) sorumluluğundadır. sandbox-bridge paketinin kendi varsayılan deny-list'i marka-bağımsızdır (bkz. README).",
+  "extraDenyTerms": [],
+  "ignore": [],
+  "skipDirs": [],
+  "skipFiles": []
+}

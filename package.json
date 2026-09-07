@@ -1,0 +1,67 @@
+{
+  "name": "@tmob/sandbox-bridge",
+  "version": "0.1.0",
+  "description": "B2C satış sandbox demoları için iframe köprü protokolü, React yardımcıları, manifest şeması ve marka/sır/PII tarama kapısı.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/protocol/index.d.ts",
+      "import": "./dist/protocol/index.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.js"
+    },
+    "./manifest": {
+      "types": "./dist/manifest/index.d.ts",
+      "import": "./dist/manifest/index.js"
+    },
+    "./gate": {
+      "types": "./dist/gate/index.d.ts",
+      "import": "./dist/gate/index.js"
+    }
+  },
+  "bin": {
+    "sandbox-gate": "dist/gate/cli.js"
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsup",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "tsc --noEmit -p tsconfig.json",
+    "prepare": "npm run build",
+    "gate:self": "node dist/gate/cli.js --src . --out dist --report gate-report.json --config sandbox-gate.config.json"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.0.1",
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.12",
+    "@vitest/coverage-v8": "^2.1.8",
+    "jsdom": "^25.0.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

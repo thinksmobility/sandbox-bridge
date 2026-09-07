@@ -1,0 +1,13 @@
+node_modules
+dist
+coverage
+gate-report.json
+*.log
+.DS_Store
+
+templates/expo-kit/node_modules
+templates/expo-kit/dist
+templates/expo-kit/.expo
+templates/expo-kit/web-build
+templates/expo-kit/ios
+templates/expo-kit/android

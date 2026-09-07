@@ -1,0 +1,167 @@
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
+import { createEnvelope, isFromAllowedOrigin, parseMessage } from '../protocol/index.js'
+import type { SandboxPayloadMap, SandboxSessionInfo } from '../protocol/index.js'
+
+export interface SandboxProviderProps {
+  /** Manifest'teki `demo.id` ile aynı olmalı (ör. "voltgo"). */
+  demoId: string
+  /** CP'nin izinli origin'leri — `postMessage` hedefi asla `'*'` olmaz. */
+  allowedOrigins: readonly string[]
+  manifestDigest: string
+  screens: number
+  children: ReactNode
+}
+
+export interface SandboxContextValue {
+  ready: boolean
+  session: SandboxSessionInfo | null
+  persona: string | null
+  scenario: string | null
+  feedbackMode: boolean
+  snapshot: Record<string, unknown> | null
+  highlightedComponentId: string | null
+  sendNavigate: (payload: SandboxPayloadMap['sandbox:navigate']) => void
+  sendComponentSelected: (payload: SandboxPayloadMap['sandbox:component-selected']) => void
+  sendEvent: (payload: SandboxPayloadMap['sandbox:event']) => void
+  sendStateSync: (payload: SandboxPayloadMap['sandbox:state-sync']) => void
+  sendError: (payload: SandboxPayloadMap['sandbox:error']) => void
+}
+
+const SandboxContext = createContext<SandboxContextValue | null>(null)
+
+export function useSandbox(): SandboxContextValue {
+  const ctx = useContext(SandboxContext)
+  if (!ctx) {
+    throw new Error('useSandbox, SandboxProvider dışında kullanılamaz.')
+  }
+  return ctx
+}
+
+function isEmbeddedInIframe(): boolean {
+  return typeof window !== 'undefined' && !!window.parent && window.parent !== window
+}
+
+export function SandboxProvider({
+  demoId,
+  allowedOrigins,
+  manifestDigest,
+  screens,
+  children
+}: SandboxProviderProps): React.JSX.Element {
+  const [ready, setReady] = useState(false)
+  const [session, setSession] = useState<SandboxSessionInfo | null>(null)
+  const [persona, setPersona] = useState<string | null>(null)
+  const [scenario, setScenario] = useState<string | null>(null)
+  const [feedbackMode, setFeedbackMode] = useState(false)
+  const [snapshot, setSnapshot] = useState<Record<string, unknown> | null>(null)
+  const [highlightedComponentId, setHighlightedComponentId] = useState<string | null>(null)
+
+  const targetOriginRef = useRef<string | null>(null)
+  const sessionIdRef = useRef<string>('')
+
+  const post = useCallback(
+    <T extends keyof SandboxPayloadMap>(type: T, payload: SandboxPayloadMap[T]) => {
+      if (!isEmbeddedInIframe()) return
+      const targetOrigin = targetOriginRef.current
+      if (!targetOrigin) return
+      const envelope = createEnvelope({ type, demoId, sessionId: sessionIdRef.current, payload })
+      window.parent.postMessage(envelope, targetOrigin)
+    },
+    [demoId]
+  )
+
+  useEffect(() => {
+    function handleMessage(event: MessageEvent): void {
+      if (!isFromAllowedOrigin(event, allowedOrigins)) return
+      if (isEmbeddedInIframe() && event.source !== window.parent) return
+
+      const result = parseMessage(event.data)
+      if (!result.ok) return
+      const { message } = result
+
+      switch (message.type) {
+        case 'sandbox:init': {
+          // Hedef origin CP'nin kendi bildirdiği `payload.allowedOrigin`
+          // DEĞİL, tarayıcının doğruladığı `event.origin`dir — bir CP payload
+          // içinde yanlış/kötü niyetli origin bildirse bile sonraki
+          // postMessage'lar asla o origin'e gitmez. `payload.allowedOrigin`
+          // yalnızca tutarlılık kontrolü için kullanılır: uymuyorsa handshake
+          // reddedilir (sessizce yok sayılır, `ready` set edilmez).
+          if (message.payload.allowedOrigin !== event.origin) {
+            break
+          }
+          targetOriginRef.current = event.origin
+          sessionIdRef.current = message.payload.session.id
+          setSession(message.payload.session)
+          setPersona(message.payload.persona ?? null)
+          setScenario(message.payload.scenario ?? null)
+          setFeedbackMode(message.payload.feedbackMode)
+          setSnapshot(message.payload.snapshot ?? null)
+          setReady(true)
+          break
+        }
+        case 'sandbox:feedback-mode':
+          setFeedbackMode(message.payload.on)
+          break
+        case 'sandbox:highlight':
+          setHighlightedComponentId(message.payload.componentId)
+          break
+        case 'sandbox:persona':
+          setPersona(message.payload.id)
+          break
+        case 'sandbox:scenario':
+          setScenario(message.payload.id)
+          break
+        case 'sandbox:reset':
+          setSnapshot(null)
+          break
+        default:
+          break
+      }
+    }
+
+    if (typeof window === 'undefined') return
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [allowedOrigins])
+
+  useEffect(() => {
+    if (!isEmbeddedInIframe()) return
+    // El sıkışma: `sandbox:init` gelene kadar tek hedef origin bilinmediği için
+    // `ready` her izinli origin'e (joker hariç) yollanır; init sonrası tüm
+    // sonraki mesajlar CP'nin bildirdiği tek origin'e sabitlenir.
+    const envelope = createEnvelope({
+      type: 'sandbox:ready',
+      demoId,
+      sessionId: '',
+      payload: { manifestDigest, screens, protocol: 1 }
+    })
+    for (const origin of allowedOrigins) {
+      if (origin === '*') continue
+      window.parent.postMessage(envelope, origin)
+    }
+    // Yalnızca mount'ta bir kez çalışır.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const value = useMemo<SandboxContextValue>(
+    () => ({
+      ready,
+      session,
+      persona,
+      scenario,
+      feedbackMode,
+      snapshot,
+      highlightedComponentId,
+      sendNavigate: (payload) => post('sandbox:navigate', payload),
+      sendComponentSelected: (payload) => post('sandbox:component-selected', payload),
+      sendEvent: (payload) => post('sandbox:event', payload),
+      sendStateSync: (payload) => post('sandbox:state-sync', payload),
+      sendError: (payload) => post('sandbox:error', payload)
+    }),
+    [ready, session, persona, scenario, feedbackMode, snapshot, highlightedComponentId, post]
+  )
+
+  return <SandboxContext.Provider value={value}>{children}</SandboxContext.Provider>
+}

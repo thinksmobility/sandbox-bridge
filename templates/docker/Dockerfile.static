@@ -1,0 +1,46 @@
+# Statik demo repoları (VoltGo/Rentigo: `expo export -p web` → dist/,
+# AirNova: `next build` (output: 'export') → out/) için çok aşamalı build.
+#
+# Kullanım: bu dosyayı demo repo köküne `Dockerfile` olarak kopyalayın ve
+# BUILD_OUTPUT_DIR argümanını build çıktı dizininize göre ayarlayın.
+#
+#   docker build --build-arg BUILD_OUTPUT_DIR=dist -t sandbox-voltgo .
+#   docker build --build-arg BUILD_OUTPUT_DIR=out   -t sandbox-airnova .
+
+# ---- build ----
+FROM node:22-bookworm-slim AS build
+WORKDIR /app
+
+COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* ./
+RUN if [ -f pnpm-lock.yaml ]; then corepack enable && corepack prepare pnpm@latest --activate && pnpm install --frozen-lockfile; \
+    elif [ -f yarn.lock ]; then corepack enable && yarn install --frozen-lockfile; \
+    else npm ci; fi
+
+COPY . .
+
+# `sandbox-gate` build çıktısını da tarar — FAIL ederse image üretilmez.
+ARG BUILD_OUTPUT_DIR=dist
+RUN npm run build \
+ && npx sandbox-gate --src . --out "${BUILD_OUTPUT_DIR}" --report gate-report.json --config sandbox-gate.config.json
+
+# ---- runtime ----
+FROM nginx:1.27-alpine AS runtime
+
+COPY templates/docker/nginx.conf /etc/nginx/templates/default.conf.template
+ARG BUILD_OUTPUT_DIR=dist
+COPY --from=build /app/${BUILD_OUTPUT_DIR} /usr/share/nginx/html
+COPY --from=build /app/gate-report.json /usr/share/nginx/gate-report.json
+
+# nginx:alpine görüntüsü `envsubst` ile `/etc/nginx/templates/*.template`
+# dosyalarını `/etc/nginx/conf.d/`e otomatik render eder (resmi entrypoint).
+#
+# Fail-closed varsayılan: `envsubst` bash'in `${VAR:-default}` sözdizimini
+# DESTEKLEMEZ, o yüzden nginx.conf içine bir fallback yazamayız — güvenli
+# varsayılan bu ENV katmanında olmalı. Operatör env'i geçmeyi unutursa
+# hiçbir origin bu demoyu iframe'e alamaz (`frame-ancestors 'none'`),
+# yanlışlıkla izinli bir varsayılana düşmek yerine. Gerçek deploy'da
+# `docker run -e SANDBOX_ALLOWED_ORIGINS="https://hello.tmobstudio.ai"` ile
+# açıkça geçilmeli.
+ENV SANDBOX_ALLOWED_ORIGINS="'none'"
+
+EXPOSE 80
