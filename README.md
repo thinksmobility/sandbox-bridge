@@ -166,6 +166,31 @@ edemez, `frame-ancestors` onu geçersizleştirir).
 react-native-reanimated + react-native-web + `react-leaflet` (web harita)
 başlangıç şablonu. Kopyalama adımları için `templates/expo-kit/README.md`.
 
+## Web (Next.js/Vite) demo repoları için önerilen test toolchain
+
+AirNova (Next.js) dilimi, `vitest@5` + `@vitejs/plugin-react@6` + `vite@8`
+kombinasyonunda coverage text-reporter'ın bazı dosyaları sessizce rapordan
+düşürdüğünü tespit etti (kapsam sayıları gerçek dışı yüksek/eksik
+görünüyordu). Şu kombinasyon bunu düzeltiyor ve doğrulandı:
+
+```json
+{
+  "devDependencies": {
+    "vitest": "^4.1.11",
+    "@vitest/coverage-istanbul": "^4.1.11",
+    "@vitejs/plugin-react": "^5.2.0",
+    "vite": "^7.0.0"
+  }
+}
+```
+
+`@vitest/coverage-v8` yerine `@vitest/coverage-istanbul` kullanın. Bu kısıt
+yalnızca **web (Next.js/Vite tabanlı) demo repoları** için geçerlidir —
+`templates/expo-kit` `jest-expo` kullanır, etkilenmez. Bu paketin kendi
+kök testleri de `@vitest/coverage-v8` ile çalışır (Node/React kütüphane
+kodu, aynı sorunu tetiklemiyor); yalnızca web demo repoları için yukarıdaki
+kombinasyonu önerin.
+
 ## Geliştirme
 
 ```bash
