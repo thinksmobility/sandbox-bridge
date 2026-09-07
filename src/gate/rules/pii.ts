@@ -27,7 +27,12 @@ const TC_CANDIDATE_PATTERN = /(?<!\d)\d{11}(?!\d)/g
 // ondalık sabitler (ör. bezier easing eğrileri, "0.545454545454...") içinden
 // rastgele bir 10 haneli pencere "telefon numarası" gibi eşleşebilir.
 const PHONE_CANDIDATE_PATTERN = /(?<!\d)(?:\+90|0)?[\s-]?5\d{2}[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}(?!\d)/g
-const EMAIL_CANDIDATE_PATTERN = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g
+// Son etiket (TLD) en az bir harf içermeli — yoksa `pnpm@11.1.2` gibi
+// paket-sürüm dizgeleri (ör. package.json/CI script'lerinde) e-posta sanılır.
+// `@` sonrası `<sayı>x.<görsel-uzantısı>` ise retina asset adı sayılır
+// (`icon@2x.png`, `logo@3x.jpg`) ve e-posta adayı olarak değerlendirilmez.
+const EMAIL_CANDIDATE_PATTERN =
+  /[\w.+-]+@(?!\d+x\.(?:png|jpe?g|webp|gif|svg)\b)[\w-]+(?:\.[\w-]+)*\.[A-Za-z][A-Za-z0-9-]*/g
 
 /** Rezerve test aralığı: +90 555 000 XX XX (10 haneli, ülke kodsuz). */
 const RESERVED_PHONE_PATTERN = /^555000\d{4}$/

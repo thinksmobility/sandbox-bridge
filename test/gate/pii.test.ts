@@ -68,6 +68,37 @@ describe('gate/rules/pii — e-posta', () => {
     expect(findings[0]?.rule).toBe('pii-email')
     expect(findings[0]?.excerpt).not.toContain('deniz.yilmaz@gmail.com')
   })
+
+  it('paket-sürüm dizgesini (pnpm@11.1.2 gibi) e-posta sanmaz', () => {
+    expect(scanPii('corepack prepare pnpm@11.1.2 --activate', 'package.json')).toHaveLength(0)
+    expect(scanPii('"packageManager": "pnpm@11.1.2"', 'package.json')).toHaveLength(0)
+  })
+
+  it('harfle biten kısa alan adını (a@b.co) yakalar', () => {
+    const findings = scanPii('mail: a@b.co', 'seed/customers.json')
+    expect(findings).toHaveLength(1)
+    expect(findings[0]?.rule).toBe('pii-email')
+  })
+
+  it('izinli olmayan gerçek görünen alan adını (harfli TLD) yakalar', () => {
+    const findings = scanPii('mail: ali@ornekfirma.com', 'seed/customers.json')
+    expect(findings).toHaveLength(1)
+  })
+
+  it('retina asset adlarını (icon@2x.png, logo@3x.jpg) e-posta sanmaz', () => {
+    expect(scanPii("<img src='./icon@2x.png' />", 'src/App.tsx')).toHaveLength(0)
+    expect(scanPii('background: url(logo@3x.jpg)', 'src/App.tsx')).toHaveLength(0)
+    expect(scanPii('photo@2x.jpeg photo@2x.webp photo@2x.gif photo@2x.svg', 'a.tsx')).toHaveLength(0)
+  })
+
+  it('gerçek e-posta hâlâ yakalanır (regresyon: retina muafiyeti aşırı geniş değil)', () => {
+    expect(scanPii('mail: ali@example.com', 'a.ts')).toHaveLength(0) // izinli domain
+    expect(scanPii('mail: ali@ornekfirma.com', 'a.ts')).toHaveLength(1) // izinli değil, yakalanır
+  })
+
+  it('pnpm@11.1.2 hâlâ eşleşmez (regresyon)', () => {
+    expect(scanPii('"packageManager": "pnpm@11.1.2"', 'package.json')).toHaveLength(0)
+  })
 })
 
 describe('gate/rules/pii — includeNumericRules:false (minified bundle muafiyeti)', () => {

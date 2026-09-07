@@ -133,4 +133,30 @@ describe('manifest/validateManifest', () => {
     const result = validateManifest(manifest)
     expect(result.ok).toBe(false)
   })
+
+  it('build.digest opsiyoneldir — verilmeden de geçerlidir (geriye uyumlu)', () => {
+    const manifest = buildValidManifest()
+    const result = validateManifest(manifest)
+    expect(result.ok).toBe(true)
+  })
+
+  it('build.digest verilirse geçerli sha256 hex (64 karakter) olmalı', () => {
+    const manifest = buildValidManifest()
+    ;(manifest.build as Record<string, unknown>).digest = 'a'.repeat(64)
+    const result = validateManifest(manifest)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.manifest.build.digest).toBe('a'.repeat(64))
+    }
+  })
+
+  it('build.digest geçersiz biçimde (kısa/büyük harf) reddedilir', () => {
+    const manifestShort = buildValidManifest()
+    ;(manifestShort.build as Record<string, unknown>).digest = 'abc123'
+    expect(validateManifest(manifestShort).ok).toBe(false)
+
+    const manifestUpper = buildValidManifest()
+    ;(manifestUpper.build as Record<string, unknown>).digest = 'A'.repeat(64)
+    expect(validateManifest(manifestUpper).ok).toBe(false)
+  })
 })

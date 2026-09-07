@@ -122,6 +122,11 @@ redesign) KONVANSİYONUYLA kullanır; Rentigo `['gecikme','bulunamadi']` gibi
 senaryo/durum etiketleri kullanır. `original|improved` anlamı yalnızca
 dokümantasyondur, şema tarafından zorlanmaz.
 
+`build.digest` opsiyoneldir (sha256 hex, 64 karakter) — demolar içerik
+digest'ini buraya yazabilir, ayrı bir `src/generated/*-meta.json` yardımcı
+dosyasına gerek kalmaz; `sandbox:ready`'nin `manifestDigest`'i için de
+kaynak olarak kullanılabilir.
+
 ## `sandbox-gate` — tarama kapısı
 
 ```bash

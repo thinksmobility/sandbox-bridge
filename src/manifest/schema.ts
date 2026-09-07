@@ -30,7 +30,14 @@ export const sandboxManifestBuildSchema = z.object({
   repo: z.string().min(1),
   commit: z.string().min(1),
   builtAt: z.string().min(1),
-  gate: z.enum(['pass', 'fail', 'pending'])
+  gate: z.enum(['pass', 'fail', 'pending']),
+  // Opsiyonel — geriye uyumlu. İçerik digest'i (sha256 hex, 64 karakter):
+  // demolar bunu `sandbox:ready`'nin `manifestDigest`'i olarak da kullanabilir,
+  // ayrı bir `src/generated/*-meta.json` yardımcı dosyasına gerek kalmaz.
+  digest: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .optional()
 })
 
 export const sandboxManifestPersonaSchema = z.object({
