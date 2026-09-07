@@ -2,11 +2,18 @@ import { z } from 'zod'
 
 /**
  * `sandbox.manifest.json` şeması — her demo repo build çıktısında kök dizine
- * bu şekli üretir. AirNova'da `screens[].variants` ve `components[].variantScope`
- * `original|improved` değerleriyle doldurulur; VoltGo/Rentigo'da boş bırakılır.
+ * bu şekli üretir. `screens[].variants` / `components[].variantScope` genel
+ * amaçlı bir varyant etiketi listesidir — demo kendi anlamını belirler:
+ * AirNova `['original','improved']` (before/after redesign) kullanır,
+ * Rentigo `['gecikme','bulunamadi']` gibi senaryo/durum etiketleri kullanır,
+ * VoltGo boş bırakır. Şema belirli bir değer kümesine kilitlenmez (yalnızca
+ * küçük harf/rakam/tire biçimini zorunlu kılar) — yeni demo türleri kendi
+ * varyant sözlüğünü serbestçe tanımlayabilir. AirNova'nın `original|improved`
+ * anlamı yalnızca KONVANSİYONDUR (dokümantasyon), şema tarafından
+ * zorlanmaz.
  */
 
-export const sandboxManifestVariantSchema = z.enum(['original', 'improved'])
+export const sandboxManifestVariantSchema = z.string().min(1).max(40).regex(/^[a-z0-9-]+$/)
 
 export const sandboxManifestDemoSchema = z.object({
   id: z.string().min(1),
@@ -50,7 +57,7 @@ export const sandboxManifestScreenSchema = z.object({
   route: z.string().min(1),
   order: z.number().int().nonnegative(),
   flowId: z.string().min(1),
-  variants: z.array(sandboxManifestVariantSchema).optional(),
+  variants: z.array(sandboxManifestVariantSchema).max(8).optional(),
   thumb: z.string().min(1).optional()
 })
 
@@ -65,7 +72,7 @@ export const sandboxManifestComponentSchema = z.object({
   feedbackEnabled: z.boolean(),
   requirementRefs: z.array(z.string().min(1)).default([]),
   taskRefs: z.array(z.string().min(1)).default([]),
-  variantScope: z.array(sandboxManifestVariantSchema).optional()
+  variantScope: z.array(sandboxManifestVariantSchema).max(8).optional()
 })
 
 export const sandboxManifestSchema = z.object({

@@ -115,6 +115,13 @@ import script'inde kullanılır. `components[].selector` yalnızca
 CP bunu asla ham `querySelector` girdisi olarak kullanıcıya vermez, yalnızca
 kendi `SandboxSelectable`'ının bastığı attribute ile eşleştirir.
 
+`screens[].variants` / `components[].variantScope` genel amaçlı varyant
+etiketleridir (küçük harf/rakam/tire, en fazla 8 öğe) — belirli bir enum'a
+kilitli DEĞİLDİR. AirNova bunu `['original','improved']` (before/after
+redesign) KONVANSİYONUYLA kullanır; Rentigo `['gecikme','bulunamadi']` gibi
+senaryo/durum etiketleri kullanır. `original|improved` anlamı yalnızca
+dokümantasyondur, şema tarafından zorlanmaz.
+
 ## `sandbox-gate` — tarama kapısı
 
 ```bash

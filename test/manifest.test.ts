@@ -99,7 +99,26 @@ describe('manifest/validateManifest', () => {
     }
   })
 
-  it('variants listesinde geçersiz değer olursa reddeder', () => {
+  it("Rentigo tarzı serbest varyant etiketlerini (senaryo/durum) kabul eder — belirli bir enum'a kilitli değil", () => {
+    const manifest = buildValidManifest()
+    manifest.screens = [
+      {
+        id: 'scr-takip',
+        title: 'Canlı takip',
+        route: '/takip',
+        order: 1,
+        flowId: 'teslimat',
+        variants: ['gecikme', 'bulunamadi']
+      }
+    ]
+    const result = validateManifest(manifest)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.manifest.screens[0]?.variants).toEqual(['gecikme', 'bulunamadi'])
+    }
+  })
+
+  it('variants listesinde biçime uymayan değer olursa (büyük harf/boşluk) reddeder', () => {
     const manifest = buildValidManifest()
     manifest.screens = [
       {
@@ -108,7 +127,7 @@ describe('manifest/validateManifest', () => {
         route: '/ara',
         order: 1,
         flowId: 'booking',
-        variants: ['legacy']
+        variants: ['Geçersiz Değer']
       }
     ]
     const result = validateManifest(manifest)
