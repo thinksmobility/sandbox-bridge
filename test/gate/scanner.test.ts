@@ -85,4 +85,13 @@ describe('gate/scanner scanDirectory', () => {
     expect(rules).toContain('credential-aws-access-key')
     expect(rules).not.toContain('pii-tc-kimlik')
   })
+
+  it("PNG/JPEG'e gömülü köken/kimlik metadata'sını (asset-metadata) --src/--out ayrımı olmadan yakalar, temiz görselleri geçirir", () => {
+    const result = scanDirectory('test/fixtures/gate/asset-metadata')
+    const findings = result.findings.filter((f) => f.rule === 'asset-metadata')
+    const flaggedFiles = findings.map((f) => f.file).sort()
+    expect(flaggedFiles).toEqual(['dirty-c2pa.jpg', 'dirty-c2pa.png', 'dirty-xmp.jpg', 'dirty-xmp.png'])
+    expect(result.findings.some((f) => f.file === 'clean.png' && f.rule === 'asset-metadata')).toBe(false)
+    expect(result.findings.some((f) => f.file === 'clean.jpg' && f.rule === 'asset-metadata')).toBe(false)
+  })
 })

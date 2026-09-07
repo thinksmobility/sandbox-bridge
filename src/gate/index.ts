@@ -1,4 +1,5 @@
 export type { Finding } from './types.js'
+export { scanAssetMetadata } from './rules/asset-metadata.js'
 export { DENY_TERMS, scanBrand } from './rules/brand.js'
 export { scanCredentials } from './rules/credentials.js'
 export { scanForbiddenFile } from './rules/forbidden-files.js'

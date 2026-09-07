@@ -8,8 +8,13 @@ import type { SandboxPayloadMap, SandboxSessionInfo } from '../protocol/index.js
 export interface SandboxProviderProps {
   /** Manifest'teki `demo.id` ile aynı olmalı (ör. "voltgo"). */
   demoId: string
-  /** CP'nin izinli origin'leri — `postMessage` hedefi asla `'*'` olmaz. */
-  allowedOrigins: readonly string[]
+  /**
+   * CP'nin izinli origin'leri — `postMessage` hedefi asla `'*'` olmaz. Düz
+   * dizi (geriye uyumlu) ya da bir fonksiyon (`() => resolveAllowedOrigins(...)`)
+   * kabul eder — statik export'larda build-time env'e ek olarak
+   * `window.__SANDBOX_RUNTIME__` konteyner-zamanı değerini de kullanmak için.
+   */
+  allowedOrigins: readonly string[] | (() => readonly string[])
   manifestDigest: string
   screens: number
   children: ReactNode
@@ -63,6 +68,11 @@ export function SandboxProvider({
   onInit,
   onReset
 }: SandboxProviderProps): React.JSX.Element {
+  const resolvedAllowedOrigins = useMemo(
+    () => (typeof allowedOrigins === 'function' ? allowedOrigins() : allowedOrigins),
+    [allowedOrigins]
+  )
+
   const [ready, setReady] = useState(false)
   const [session, setSession] = useState<SandboxSessionInfo | null>(null)
   const [persona, setPersona] = useState<string | null>(null)
@@ -94,8 +104,13 @@ export function SandboxProvider({
 
   useEffect(() => {
     function handleMessage(event: MessageEvent): void {
-      if (!isFromAllowedOrigin(event, allowedOrigins)) return
-      if (isEmbeddedInIframe() && event.source !== window.parent) return
+      if (!isFromAllowedOrigin(event, resolvedAllowedOrigins)) return
+      // Koşulsuz kontrol: iframe DIŞINDayken (üst pencere, `mode=sandbox`
+      // yok) provider hiçbir mesaj işlemez — aksi halde izinli origin'deki
+      // bir opener/pencere sahte `sandbox:init`/`sandbox:reset` gönderebilir.
+      // İframe İÇİNDEyken kabul edilen tek kaynak `window.parent`'tır.
+      if (!isEmbeddedInIframe()) return
+      if (event.source !== window.parent) return
 
       const result = parseMessage(event.data)
       if (!result.ok) return
@@ -148,7 +163,7 @@ export function SandboxProvider({
     if (typeof window === 'undefined') return
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
-  }, [allowedOrigins])
+  }, [resolvedAllowedOrigins])
 
   useEffect(() => {
     if (!isEmbeddedInIframe()) return
@@ -161,11 +176,13 @@ export function SandboxProvider({
       sessionId: '',
       payload: { manifestDigest, screens, protocol: 1 }
     })
-    for (const origin of allowedOrigins) {
+    for (const origin of resolvedAllowedOrigins) {
       if (origin === '*') continue
       window.parent.postMessage(envelope, origin)
     }
-    // Yalnızca mount'ta bir kez çalışır.
+    // `resolvedAllowedOrigins` mount anındaki değeriyle kullanılır (fonksiyon
+    // formu genelde ilk render'da sabit bir sonuç üretir); yeniden bağlanma
+    // istenmiyor.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

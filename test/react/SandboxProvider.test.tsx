@@ -124,6 +124,74 @@ describe('SandboxProvider', () => {
     expect(screen.getByTestId('ready').textContent).toBe('false')
   })
 
+  it('iframe DIŞINDAYKEN (top-level, mode=sandbox yok) izinli origin\'den gelse bile mesaj işlenmez', () => {
+    // Top-level'ı simüle et: window.parent === window (isEmbeddedInIframe() → false).
+    vi.stubGlobal('parent', window)
+
+    render(
+      <SandboxProvider demoId="voltgo" allowedOrigins={['https://hello.tmobstudio.ai']} manifestDigest="d" screens={1}>
+        <Consumer />
+      </SandboxProvider>
+    )
+
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          origin: 'https://hello.tmobstudio.ai',
+          source: window,
+          data: {
+            v: 1,
+            demoId: 'voltgo',
+            sessionId: '',
+            msgId: 'm-init',
+            ts: 1,
+            type: 'sandbox:init',
+            payload: {
+              session: { id: 'sess-top', expiresAt: '2026-09-08T00:00:00.000Z' },
+              feedbackMode: true,
+              allowedOrigin: 'https://hello.tmobstudio.ai'
+            }
+          }
+        })
+      )
+    })
+
+    expect(screen.getByTestId('ready').textContent).toBe('false')
+  })
+
+  it("iframe İÇİNDEYKEN event.source window.parent'tan farklıysa reddeder", () => {
+    const otherSource = { postMessage: vi.fn() }
+    render(
+      <SandboxProvider demoId="voltgo" allowedOrigins={['https://hello.tmobstudio.ai']} manifestDigest="d" screens={1}>
+        <Consumer />
+      </SandboxProvider>
+    )
+
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          origin: 'https://hello.tmobstudio.ai',
+          source: otherSource as unknown as Window,
+          data: {
+            v: 1,
+            demoId: 'voltgo',
+            sessionId: '',
+            msgId: 'm-init',
+            ts: 1,
+            type: 'sandbox:init',
+            payload: {
+              session: { id: 'sess-other', expiresAt: '2026-09-08T00:00:00.000Z' },
+              feedbackMode: true,
+              allowedOrigin: 'https://hello.tmobstudio.ai'
+            }
+          }
+        })
+      )
+    })
+
+    expect(screen.getByTestId('ready').textContent).toBe('false')
+  })
+
   it("payload.allowedOrigin gerçek event.origin ile uyuşmazsa handshake'i reddeder (izinli origin'den gelse bile)", () => {
     render(
       <SandboxProvider demoId="voltgo" allowedOrigins={['https://hello.tmobstudio.ai']} manifestDigest="d" screens={1}>
@@ -339,6 +407,45 @@ describe('SandboxProvider', () => {
       })
     }).not.toThrow()
     expect(screen.getByTestId('reset-count').textContent).toBe('1')
+  })
+
+  it('allowedOrigins fonksiyon formunda verilebilir (runtime çözümleme için) ve düz dizi gibi çalışır', () => {
+    render(
+      <SandboxProvider
+        demoId="voltgo"
+        allowedOrigins={() => ['https://hello.tmobstudio.ai']}
+        manifestDigest="d"
+        screens={1}
+      >
+        <Consumer />
+      </SandboxProvider>
+    )
+
+    expect(postMessageSpy).toHaveBeenCalledTimes(1)
+    expect(postMessageSpy.mock.calls[0]?.[1]).toBe('https://hello.tmobstudio.ai')
+
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          origin: 'https://hello.tmobstudio.ai',
+          source: fakeParent as unknown as Window,
+          data: {
+            v: 1,
+            demoId: 'voltgo',
+            sessionId: '',
+            msgId: 'm-init',
+            ts: 1,
+            type: 'sandbox:init',
+            payload: {
+              session: { id: 'sess-fn', expiresAt: '2026-09-08T00:00:00.000Z' },
+              feedbackMode: false,
+              allowedOrigin: 'https://hello.tmobstudio.ai'
+            }
+          }
+        })
+      )
+    })
+    expect(screen.getByTestId('session-id').textContent).toBe('sess-fn')
   })
 
   it('useSandbox, SandboxProvider dışında kullanılırsa fırlatır', () => {

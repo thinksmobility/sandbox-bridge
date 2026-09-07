@@ -1,0 +1,21 @@
+#!/bin/sh
+# ⚠️ Uzantı bilinçli olarak `.envsh` — nginx:alpine resmi entrypoint'i
+# `/docker-entrypoint.d/` içindeki dosyaları uzantıya göre ayırır:
+# `*.sh` dosyaları ÇALIŞTIRILABİLİRSE ayrı bir alt-süreçte ÇALIŞTIRILIR
+# (export'lar kardeş script'lere YANSIMAZ); `*.envsh` dosyaları
+# ÇALIŞTIRILABİLİRSE `. "$f"` ile KAYNAKLANIR (export'lar aynı kabukta kalan
+# sonraki script'lere de yansır) — HER İKİ TÜR de çalıştırılabilir DEĞİLSE
+# sessizce (bir uyarıyla) YOK SAYILIR. Bu script'in `export`'unun, alfabetik
+# sırada SONRA gelen resmi `20-envsubst-on-templates.sh` adımını etkilemesi
+# GEREKTİĞİNDEN hem `.envsh` uzantısı HEM `chmod +x` ZORUNLUDUR (ilk halde
+# yanlışlıkla `.sh` + non-executable yapılmıştı — script tamamen sessizce
+# yok sayılıyordu, gerçek imajla `docker run` + `curl -I` testinde bulundu).
+#
+# Amaç: operatör `docker run -e SANDBOX_ALLOWED_ORIGINS=""` ile env'i BOŞ
+# geçerse (ya da hiç geçmezse — Dockerfile'daki ENV varsayılanı zaten
+# `'none'` ama override edilebilir), `envsubst` `frame-ancestors ;` gibi
+# kaynaksız/geçersiz bir CSP direktifi üretmesin diye fail-closed `'none'`'a
+# normalize edilir.
+if [ -z "${SANDBOX_ALLOWED_ORIGINS:-}" ]; then
+  export SANDBOX_ALLOWED_ORIGINS="'none'"
+fi

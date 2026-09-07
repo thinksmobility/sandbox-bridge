@@ -31,6 +31,23 @@ ARG BUILD_OUTPUT_DIR=dist
 COPY --from=build /app/${BUILD_OUTPUT_DIR} /usr/share/nginx/html
 COPY --from=build /app/gate-report.json /usr/share/nginx/gate-report.json
 
+# `/docker-entrypoint.d/*` — nginx başlamadan ÖNCE alfabetik sırayla
+# otomatik koşar (resmi entrypoint mekanizması):
+# 05 (bu, `.envsh` + çalıştırılabilir → KAYNAKLANIR) → 20 (resmi envsubst,
+# `.sh` + çalıştırılabilir → alt-süreçte çalışır) → 40 (bizim, `.sh`).
+# 05, `SANDBOX_ALLOWED_ORIGINS` boşsa `'none'`'a normalize eder (envsubst
+# ÇALIŞMADAN ÖNCE) — `export`'un 20'ye yansıması için `.envsh` uzantısı VE
+# `chmod +x` İKİSİ DE zorunlu (bkz. dosyanın kendi açıklaması — ilk halde
+# `.sh` + non-executable yapılmıştı, script sessizce yok sayılıyordu).
+COPY templates/docker/05-normalize-sandbox-env.envsh /docker-entrypoint.d/05-normalize-sandbox-env.envsh
+RUN chmod +x /docker-entrypoint.d/05-normalize-sandbox-env.envsh
+
+# `SANDBOX_ALLOWED_ORIGINS`(+`SANDBOX_DEMO_ID`)'den `/sandbox-runtime.js`'i
+# KONTEYNER BAŞLARKEN üretir (build-time'da değil) — bkz. dosyanın kendi
+# açıklaması.
+COPY templates/docker/40-generate-sandbox-runtime.sh /docker-entrypoint.d/40-generate-sandbox-runtime.sh
+RUN chmod +x /docker-entrypoint.d/40-generate-sandbox-runtime.sh
+
 # nginx:alpine görüntüsü `envsubst` ile `/etc/nginx/templates/*.template`
 # dosyalarını `/etc/nginx/conf.d/`e otomatik render eder (resmi entrypoint).
 #

@@ -1,5 +1,6 @@
 import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs'
 import { extname, join, relative } from 'node:path'
+import { scanAssetMetadata } from './rules/asset-metadata.js'
 import { scanBrand } from './rules/brand.js'
 import { scanCredentials } from './rules/credentials.js'
 import { scanForbiddenFile } from './rules/forbidden-files.js'
@@ -213,7 +214,14 @@ export function scanDirectory(root: string, options: ScannerOptions = {}): ScanR
     } catch {
       continue
     }
-    if (isLikelyBinary(filePath, buffer)) continue
+    if (isLikelyBinary(filePath, buffer)) {
+      // Metin taraması (brand/credential/pii) atlanır ama PNG/JPEG için
+      // gömülü köken/kimlik metadata'sı hâlâ denetlenir (piksel verisi
+      // değil, yalnızca chunk/segment yapısı) — hem --src hem --out'ta.
+      scannedFiles += 1
+      findings.push(...scanAssetMetadata(buffer, relativePath))
+      continue
+    }
 
     const content = buffer.toString('utf8')
     scannedFiles += 1

@@ -81,6 +81,30 @@ function PriceCard() {
 }
 ```
 
+**Çalışma zamanı origin config'i:** statik export'ta (`expo export -p web` /
+Next `output:'export'`) build-time env'ler bundle'a gömülür ve deploy'lar
+arası donar — `allowedOrigins` düz dizi yerine bir fonksiyon da kabul eder,
+böylece `resolveAllowedOrigins` ile konteyner-zamanı `window.__SANDBOX_RUNTIME__`
+(bkz. `templates/docker` → `40-generate-sandbox-runtime.sh`) build-time
+değerinden ÖNCELİKLİ kullanılabilir (ikisi de yoksa fail-closed boş dizi):
+
+```tsx
+import { SandboxProvider, resolveAllowedOrigins } from '@tmob/sandbox-bridge/react'
+
+<SandboxProvider
+  allowedOrigins={() =>
+    resolveAllowedOrigins({
+      runtime: typeof window !== 'undefined' ? (window as { __SANDBOX_RUNTIME__?: unknown }).__SANDBOX_RUNTIME__ : undefined,
+      buildTime: process.env.EXPO_PUBLIC_SANDBOX_ALLOWED_ORIGINS
+    })
+  }
+  /* ... */
+/>
+```
+
+Tam kurulum (nginx entrypoint script'i + Next/Expo `<script>` etiketi) için
+`templates/docker/README.md`'ye bakın.
+
 Demo kendi store'unu (booking/kasko form state'i vb.) sıfırlamak isterse
 `onReset`/`onInit` kullanır; `resetCount` `key={resetCount}` remount deseni
 için uygundur:
