@@ -130,6 +130,11 @@ gösterir); feedback modu yalnız tıklanabilirliği/klavye erişimini belirler.
 Vurgu kısa süre sonra söner, `prefers-reduced-motion` tercihinde
 animasyonsuz ve statik kalır.
 
+Feedback modunda tıklama/Enter **capture aşamasında** yakalanır: sarmalanan
+iç butonlar/`Pressable`'lar (ör. sipariş kartları) tıklamayı yutamaz, kartın
+üstüne tıklamak da bileşeni seçer; feedback modu kapalıyken çocuklar normal
+davranır.
+
 `SandboxSelectable` web'de sarmaladığı öğeye `data-sb-screen`/`data-sb-component`
 basar ve feedback modunda tıklamayı `sandbox:component-selected` mesajına
 çevirir. **React Native ağacında** (`typeof document === 'undefined'`) hiçbir

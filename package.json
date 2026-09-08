@@ -1,6 +1,6 @@
 {
   "name": "@tmob/sandbox-bridge",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "B2C sat\u0131\u015f sandbox demolar\u0131 i\u00e7in iframe k\u00f6pr\u00fc protokol\u00fc, React yard\u0131mc\u0131lar\u0131, manifest \u015femas\u0131 ve marka/s\u0131r/PII tarama kap\u0131s\u0131.",
   "type": "module",
   "license": "UNLICENSED",

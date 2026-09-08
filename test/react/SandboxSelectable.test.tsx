@@ -264,3 +264,69 @@ describe('SandboxSelectable — feedback modundan bağımsız highlight (v0.3.2)
     expect(wrapper.style.boxShadow).toMatch(/#6d5efc|rgb\(109, 94, 252\)/)
   })
 })
+
+describe('SandboxSelectable — iç etkileşimli çocuklar (BUG-13, v0.3.4)', () => {
+  let postMessageSpy: ReturnType<typeof vi.fn>
+  let fakeParent: { postMessage: ReturnType<typeof vi.fn> }
+
+  beforeEach(() => {
+    postMessageSpy = vi.fn()
+    fakeParent = { postMessage: postMessageSpy }
+    vi.stubGlobal('parent', fakeParent)
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  function renderWithInnerButton(childClick: () => void, childKey: () => void) {
+    return render(
+      <SandboxProvider demoId="rentigo" allowedOrigins={['https://hello.tmobstudio.ai']} manifestDigest="d" screens={1}>
+        <SandboxSelectable screenId="scr-siparislerim" componentId="cmp-liste" label="Sipariş kartları listesi">
+          <button type="button" onClick={childClick} onKeyDown={childKey}>
+            iç kart
+          </button>
+        </SandboxSelectable>
+      </SandboxProvider>
+    )
+  }
+
+  it('feedback modunda iç butona tıklama bileşeni seçer, çocuğun onClick\'i ÇALIŞMAZ', () => {
+    const childClick = vi.fn()
+    const { getByText } = renderWithInnerButton(childClick, vi.fn())
+    dispatchInit(fakeParent, true)
+    postMessageSpy.mockClear()
+
+    fireEvent.click(getByText('iç kart'))
+
+    expect(childClick).not.toHaveBeenCalled()
+    expect(postMessageSpy).toHaveBeenCalledTimes(1)
+    const [envelope] = postMessageSpy.mock.calls[0] as [{ type: string; payload: { componentId: string } }]
+    expect(envelope.type).toBe('sandbox:component-selected')
+    expect(envelope.payload.componentId).toBe('cmp-liste')
+  })
+
+  it('feedback modunda iç butonda Enter de bileşeni seçer, çocuğun onKeyDown\'u çalışmaz', () => {
+    const childKey = vi.fn()
+    const { getByText } = renderWithInnerButton(vi.fn(), childKey)
+    dispatchInit(fakeParent, true)
+    postMessageSpy.mockClear()
+
+    fireEvent.keyDown(getByText('iç kart'), { key: 'Enter' })
+
+    expect(childKey).not.toHaveBeenCalled()
+    expect(postMessageSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('feedback modu KAPALIYKEN çocuğun onClick\'i normal çalışır, mesaj gitmez', () => {
+    const childClick = vi.fn()
+    const { getByText } = renderWithInnerButton(childClick, vi.fn())
+    dispatchInit(fakeParent, false)
+    postMessageSpy.mockClear()
+
+    fireEvent.click(getByText('iç kart'))
+
+    expect(childClick).toHaveBeenCalledTimes(1)
+    expect(postMessageSpy).not.toHaveBeenCalled()
+  })
+})

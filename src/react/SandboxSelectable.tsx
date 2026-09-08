@@ -19,7 +19,11 @@ const HIGHLIGHT_PULSE_DURATION_MS = 1600
  * feedback modunda tıklamayı `component-selected` mesajına çevirir.
  * **Not:** feedback modu açıkken sarmalanan öğenin kendi `onClick`'i
  * yutulur (event `stopPropagation`+`preventDefault` edilir) — sarmalanan
- * bileşen aynı anda kendi tıklama davranışını korumaz.
+ * bileşen aynı anda kendi tıklama davranışını korumaz. Yakalama CAPTURE
+ * aşamasında yapılır (`onClickCapture`/`onKeyDownCapture`): BUG-13 (UI E2E,
+ * 2026-09-08) — iç etkileşimli çocuklar (RN-web `Pressable` sipariş kartları,
+ * butonlar) bubble aşamasında tıklamayı yutuyor, kullanıcı kartın üstüne
+ * tıklayınca seçim olmuyordu; capture ile wrapper çocuklardan ÖNCE davranır.
  *
  * CP'den gelen `sandbox:highlight`, feedback modundan BAĞIMSIZ olarak
  * görsel vurgu gösterir (ör. AirNova `?focus=` derin bağlantısı feedback
@@ -111,8 +115,8 @@ function WebSandboxSelectable({ screenId, componentId, label, children }: Sandbo
       role={feedbackMode ? 'button' : undefined}
       tabIndex={feedbackMode ? 0 : undefined}
       aria-label={feedbackMode ? label : undefined}
-      onClick={feedbackMode ? handleClick : undefined}
-      onKeyDown={feedbackMode ? handleKeyDown : undefined}
+      onClickCapture={feedbackMode ? handleClick : undefined}
+      onKeyDownCapture={feedbackMode ? handleKeyDown : undefined}
       style={{
         cursor: feedbackMode ? 'pointer' : undefined,
         boxShadow: pulseActive ? '0 0 0 2px #6d5efc' : '0 0 0 2px rgba(109, 94, 252, 0)',
