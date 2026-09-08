@@ -1,6 +1,6 @@
 {
   "name": "@tmob/sandbox-bridge",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "description": "B2C satış sandbox demoları için iframe köprü protokolü, React yardımcıları, manifest şeması ve marka/sır/PII tarama kapısı.",
   "type": "module",
   "license": "UNLICENSED",

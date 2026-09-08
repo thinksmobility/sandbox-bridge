@@ -12,7 +12,12 @@ import type { Finding } from '../types.js'
  * reposunun kendi `sandbox-gate.config.json` → `extraDenyTerms` alanına
  * gider — bkz. `templates/sandbox-gate.config.example.json` ve README.
  */
-export const DENY_TERMS: readonly string[] = ['tmoblabs.com', 'ssotest', 'preprod']
+// `tmoblabs.com` v0.3.6'da ÇIKARILDI: demolar staging'de bu alan adı altında
+// koşuyor (voltgo|airnova|rentigo.tmoblabs.com) ve Coolify, FQDN'i Dockerfile
+// `ARG COOLIFY_URL/COOLIFY_FQDN` + ürettiği docker-compose.yaml ile build
+// context'ine yazıyor → gate kendi host'umuzu yasaklıyordu. Kaynak ürünlerin
+// somut iç host'ları (ör. `x-mw.tmoblabs.com`) demoların extraDenyTerms'inde kalır.
+export const DENY_TERMS: readonly string[] = ['ssotest', 'preprod']
 
 /**
  * Türkçe'ye özgü nokta(sız) I/İ/ı ayrımını (`toLocaleLowerCase('tr-TR')` "I" harfini

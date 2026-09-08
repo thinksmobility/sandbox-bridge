@@ -23,7 +23,7 @@ kurulumu gerekmez — repo public olduğu için token da gerekmez):
 ```json
 {
   "dependencies": {
-    "@tmob/sandbox-bridge": "https://github.com/thinksmobility/sandbox-bridge/releases/download/v0.3.5/tmob-sandbox-bridge-0.3.5.tgz"
+    "@tmob/sandbox-bridge": "https://github.com/thinksmobility/sandbox-bridge/releases/download/v0.3.6/tmob-sandbox-bridge-0.3.6.tgz"
   }
 }
 ```

@@ -3,7 +3,9 @@ import { DENY_TERMS, scanBrand } from '../../src/gate/rules/brand.js'
 
 describe('gate/rules/brand — varsayılan (marka-bağımsız) deny-list', () => {
   it('DENY_TERMS hiçbir somut marka adı içermez, yalnızca ortam kalıpları taşır', () => {
-    expect(DENY_TERMS).toEqual(['tmoblabs.com', 'ssotest', 'preprod'])
+    expect(DENY_TERMS).toEqual(['ssotest', 'preprod'])
+    // v0.3.6: demoların kendi hosting alan adı (tmoblabs.com) yerleşik listede OLAMAZ
+    expect(DENY_TERMS).not.toContain('tmoblabs.com')
   })
 
   it('bilinen iç ortam host kalıbını (ssotest) büyük/küçük harf duyarsız yakalar', () => {
