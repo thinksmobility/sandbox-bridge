@@ -330,3 +330,69 @@ describe('SandboxSelectable — iç etkileşimli çocuklar (BUG-13, v0.3.4)', ()
     expect(postMessageSpy).not.toHaveBeenCalled()
   })
 })
+
+
+describe('SandboxSelectable — iç içe selectable (BUG-16, v0.3.5)', () => {
+  let postMessageSpy: ReturnType<typeof vi.fn>
+  let fakeParent: { postMessage: ReturnType<typeof vi.fn> }
+
+  beforeEach(() => {
+    postMessageSpy = vi.fn()
+    fakeParent = { postMessage: postMessageSpy }
+    vi.stubGlobal('parent', fakeParent)
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  function renderNested() {
+    return render(
+      <SandboxProvider demoId="airnova" allowedOrigins={['https://hello.tmobstudio.ai']} manifestDigest="d" screens={1}>
+        <SandboxSelectable screenId="scr-arama" componentId="cmp-arama-kart" label="Arama kartı">
+          <span>dış başlık</span>
+          <SandboxSelectable screenId="scr-arama" componentId="cmp-oneri" label="Akıllı havaalanı önerisi">
+            <button type="button">iç öneri</button>
+          </SandboxSelectable>
+        </SandboxSelectable>
+      </SandboxProvider>
+    )
+  }
+
+  function selectedIds(): string[] {
+    return postMessageSpy.mock.calls
+      .map((call) => call[0] as { type: string; payload: { componentId: string } })
+      .filter((envelope) => envelope.type === 'sandbox:component-selected')
+      .map((envelope) => envelope.payload.componentId)
+  }
+
+  it('iç bileşene tıklama İÇ bileşeni seçer (dış wrapper dokunmaz), tek mesaj', () => {
+    const { getByText } = renderNested()
+    dispatchInit(fakeParent, true)
+    postMessageSpy.mockClear()
+
+    fireEvent.click(getByText('iç öneri'))
+
+    expect(selectedIds()).toEqual(['cmp-oneri'])
+  })
+
+  it('dış alana tıklama DIŞ bileşeni seçer', () => {
+    const { getByText } = renderNested()
+    dispatchInit(fakeParent, true)
+    postMessageSpy.mockClear()
+
+    fireEvent.click(getByText('dış başlık'))
+
+    expect(selectedIds()).toEqual(['cmp-arama-kart'])
+  })
+
+  it('iç bileşende Enter de İÇ bileşeni seçer', () => {
+    const { getByText } = renderNested()
+    dispatchInit(fakeParent, true)
+    postMessageSpy.mockClear()
+
+    fireEvent.keyDown(getByText('iç öneri'), { key: 'Enter' })
+
+    expect(selectedIds()).toEqual(['cmp-oneri'])
+  })
+})

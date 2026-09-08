@@ -133,7 +133,8 @@ animasyonsuz ve statik kalır.
 Feedback modunda tıklama/Enter **capture aşamasında** yakalanır: sarmalanan
 iç butonlar/`Pressable`'lar (ör. sipariş kartları) tıklamayı yutamaz, kartın
 üstüne tıklamak da bileşeni seçer; feedback modu kapalıyken çocuklar normal
-davranır.
+davranır. İç içe selectable'larda tıklama EN İÇTEKİ bileşeni seçer (dış wrapper
+hedef daha içteki bir selectable'a aitse dokunmaz).
 
 `SandboxSelectable` web'de sarmaladığı öğeye `data-sb-screen`/`data-sb-component`
 basar ve feedback modunda tıklamayı `sandbox:component-selected` mesajına

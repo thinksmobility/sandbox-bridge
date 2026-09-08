@@ -59,6 +59,20 @@ function usePrefersReducedMotion(): boolean {
   return prefers
 }
 
+/**
+ * BUG-16 (UI E2E 4c, 2026-09-08): capture aşaması DIŞ → İÇ aktığı için iç içe
+ * selectable'larda (AirNova "Arama kartı" ⊃ "Akıllı havaalanı önerisi") dış
+ * wrapper'ın handler'ı önce çalışıp propagation'ı kesiyor, iç bileşen hiç
+ * seçilemiyordu. Kural: olayın hedefi daha İÇTEKİ bir selectable'a aitse bu
+ * wrapper hiçbir şey yapmadan geçer — en içteki wrapper'ın kendi capture
+ * handler'ı seçer (ve orada propagation kesilir).
+ */
+function isOwnTarget(wrapper: HTMLElement, target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return true
+  const nearest = target.closest('[data-sb-component]')
+  return nearest === null || nearest === wrapper
+}
+
 function WebSandboxSelectable({ screenId, componentId, label, children }: SandboxSelectableProps): ReactElement {
   const { feedbackMode, highlightedComponentId, sendComponentSelected } = useSandbox()
   const isHighlighted = highlightedComponentId === componentId
@@ -86,6 +100,7 @@ function WebSandboxSelectable({ screenId, componentId, label, children }: Sandbo
   const handleClick = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
       if (!feedbackMode) return
+      if (!isOwnTarget(event.currentTarget, event.target)) return
       event.preventDefault()
       event.stopPropagation()
       const rect = event.currentTarget.getBoundingClientRect()
@@ -98,6 +113,7 @@ function WebSandboxSelectable({ screenId, componentId, label, children }: Sandbo
     (event: KeyboardEvent<HTMLDivElement>) => {
       if (!feedbackMode) return
       if (event.key !== 'Enter' && event.key !== ' ') return
+      if (!isOwnTarget(event.currentTarget, event.target)) return
       event.preventDefault()
       event.stopPropagation()
       const rect = event.currentTarget.getBoundingClientRect()
