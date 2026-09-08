@@ -18,6 +18,15 @@ export interface SandboxProviderProps {
   manifestDigest: string
   screens: number
   children: ReactNode
+  /**
+   * CP'nin iframe URL'sine yazdığı opak oturum kimliği
+   * (`{demoUrl}?sbSession=<opak>&mode=sandbox`). Verilmezse
+   * `window.location.search`'ten `sbSession` otomatik okunur — bu sayede
+   * `sandbox:ready` zarfı `init` gelmeden önce de doğru `sessionId`'yi
+   * taşır (önceden hep `''` gidiyordu). `init` geldiğinde CP'nin
+   * bildirdiği `session.id` her zaman ile üzerine yazar (yetkili kaynak).
+   */
+  initialSessionId?: string
   /** `sandbox:init` alınıp handshake başarıyla tamamlandığında çağrılır. */
   onInit?: (payload: SandboxPayloadMap['sandbox:init']) => void
   /**
@@ -59,6 +68,15 @@ function isEmbeddedInIframe(): boolean {
   return typeof window !== 'undefined' && !!window.parent && window.parent !== window
 }
 
+function readSessionIdFromLocation(): string {
+  if (typeof window === 'undefined' || !window.location) return ''
+  try {
+    return new URLSearchParams(window.location.search).get('sbSession') ?? ''
+  } catch {
+    return ''
+  }
+}
+
 export function SandboxProvider({
   demoId,
   allowedOrigins,
@@ -66,7 +84,8 @@ export function SandboxProvider({
   screens,
   children,
   onInit,
-  onReset
+  onReset,
+  initialSessionId
 }: SandboxProviderProps): React.JSX.Element {
   const resolvedAllowedOrigins = useMemo(
     () => (typeof allowedOrigins === 'function' ? allowedOrigins() : allowedOrigins),
@@ -83,7 +102,7 @@ export function SandboxProvider({
   const [resetCount, setResetCount] = useState(0)
 
   const targetOriginRef = useRef<string | null>(null)
-  const sessionIdRef = useRef<string>('')
+  const sessionIdRef = useRef<string>(initialSessionId ?? readSessionIdFromLocation())
   // Callback'ler ref üzerinden tutulur: her render'da güncellenir ama
   // `handleMessage` useEffect'i yeniden bağlanmaz (listener sabit kalır).
   const onInitRef = useRef(onInit)
@@ -173,7 +192,7 @@ export function SandboxProvider({
     const envelope = createEnvelope({
       type: 'sandbox:ready',
       demoId,
-      sessionId: '',
+      sessionId: sessionIdRef.current,
       payload: { manifestDigest, screens, protocol: 1 }
     })
     for (const origin of resolvedAllowedOrigins) {

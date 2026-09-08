@@ -454,3 +454,90 @@ describe('SandboxProvider', () => {
     errorSpy.mockRestore()
   })
 })
+
+describe('SandboxProvider — sandbox:ready oturum kimliği (v0.3.2)', () => {
+  let postMessageSpy: ReturnType<typeof vi.fn>
+  let fakeParent: { postMessage: ReturnType<typeof vi.fn> }
+
+  beforeEach(() => {
+    postMessageSpy = vi.fn()
+    fakeParent = { postMessage: postMessageSpy }
+    vi.stubGlobal('parent', fakeParent)
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    window.history.replaceState({}, '', '/')
+  })
+
+  function readyEnvelope(): { type: string; sessionId: string } {
+    return postMessageSpy.mock.calls[0]?.[0] as { type: string; sessionId: string }
+  }
+
+  it("URL'deki ?sbSession değerini init gelmeden sandbox:ready zarfına yazar", () => {
+    window.history.replaceState({}, '', '/?sbSession=opak-123&mode=sandbox')
+    render(
+      <SandboxProvider demoId="voltgo" allowedOrigins={['https://hello.tmobstudio.ai']} manifestDigest="d" screens={1}>
+        <Consumer />
+      </SandboxProvider>
+    )
+    expect(readyEnvelope().type).toBe('sandbox:ready')
+    expect(readyEnvelope().sessionId).toBe('opak-123')
+  })
+
+  it("initialSessionId prop'u URL'deki değere baskın gelir", () => {
+    window.history.replaceState({}, '', '/?sbSession=opak-url')
+    render(
+      <SandboxProvider
+        demoId="voltgo"
+        allowedOrigins={['https://hello.tmobstudio.ai']}
+        manifestDigest="d"
+        screens={1}
+        initialSessionId="opak-prop"
+      >
+        <Consumer />
+      </SandboxProvider>
+    )
+    expect(readyEnvelope().sessionId).toBe('opak-prop')
+  })
+
+  it("URL'de sbSession yoksa geriye dönük olarak boş string gider", () => {
+    render(
+      <SandboxProvider demoId="voltgo" allowedOrigins={['https://hello.tmobstudio.ai']} manifestDigest="d" screens={1}>
+        <Consumer />
+      </SandboxProvider>
+    )
+    expect(readyEnvelope().sessionId).toBe('')
+  })
+
+  it("init geldiğinde CP'nin session.id'si opak kimliğin üzerine yazılır (yetkili kaynak)", () => {
+    window.history.replaceState({}, '', '/?sbSession=opak-123')
+    render(
+      <SandboxProvider demoId="voltgo" allowedOrigins={['https://hello.tmobstudio.ai']} manifestDigest="d" screens={1}>
+        <Consumer />
+      </SandboxProvider>
+    )
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          origin: 'https://hello.tmobstudio.ai',
+          source: fakeParent as unknown as Window,
+          data: {
+            v: 1,
+            demoId: 'voltgo',
+            sessionId: 'opak-123',
+            msgId: 'm-init',
+            ts: 1,
+            type: 'sandbox:init',
+            payload: {
+              session: { id: 'sess-real', expiresAt: '2026-09-08T00:00:00.000Z' },
+              feedbackMode: false,
+              allowedOrigin: 'https://hello.tmobstudio.ai'
+            }
+          }
+        })
+      )
+    })
+    expect(screen.getByTestId('session-id').textContent).toBe('sess-real')
+  })
+})

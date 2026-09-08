@@ -119,6 +119,17 @@ için uygundur:
 </SandboxProvider>
 ```
 
+`sandbox:ready` zarfı, CP iframe URL'sindeki `?sbSession=<opak>` değerini
+`sessionId` olarak taşır (URL'den otomatik okunur; `initialSessionId` prop'u
+ile açıkça da verilebilir). `sandbox:init` geldiğinde CP'nin bildirdiği
+`session.id` her zaman bunun üzerine yazar.
+
+`sandbox:highlight` görsel vurgusu feedback modundan **bağımsız** çalışır
+(ör. `?focus=` derin bağlantısı feedback modu kapalıyken de bileşeni
+gösterir); feedback modu yalnız tıklanabilirliği/klavye erişimini belirler.
+Vurgu kısa süre sonra söner, `prefers-reduced-motion` tercihinde
+animasyonsuz ve statik kalır.
+
 `SandboxSelectable` web'de sarmaladığı öğeye `data-sb-screen`/`data-sb-component`
 basar ve feedback modunda tıklamayı `sandbox:component-selected` mesajına
 çevirir. **React Native ağacında** (`typeof document === 'undefined'`) hiçbir

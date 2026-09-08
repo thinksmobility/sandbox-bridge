@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { KeyboardEvent, MouseEvent, ReactElement, ReactNode } from 'react'
 import { useSandbox } from './SandboxProvider.js'
 
@@ -11,12 +11,21 @@ export interface SandboxSelectableProps {
   children: ReactNode
 }
 
+/** Animasyonlu highlight'ın görünür kaldığı süre (ms) — `prefers-reduced-motion` yoksa. */
+const HIGHLIGHT_PULSE_DURATION_MS = 1600
+
 /**
  * Sarmaladığı öğeye web'de `data-sb-screen`/`data-sb-component` basar ve
  * feedback modunda tıklamayı `component-selected` mesajına çevirir.
  * **Not:** feedback modu açıkken sarmalanan öğenin kendi `onClick`'i
  * yutulur (event `stopPropagation`+`preventDefault` edilir) — sarmalanan
  * bileşen aynı anda kendi tıklama davranışını korumaz.
+ *
+ * CP'den gelen `sandbox:highlight`, feedback modundan BAĞIMSIZ olarak
+ * görsel vurgu gösterir (ör. AirNova `?focus=` derin bağlantısı feedback
+ * modu kapalıyken de çalışır) — feedback modu yalnızca tıklanabilirliği/
+ * klavye erişilebilirliğini belirler. Vurgu kısa süreli söner
+ * (`prefers-reduced-motion` tercih edilirse animasyonsuz, statik kalır).
  *
  * React Native ağacında `document` global'i olmadığı için otomatik olarak
  * no-op'a düşer (`react-native` bağımlılığı yok, `typeof document` ile ayrım
@@ -29,9 +38,39 @@ export function SandboxSelectable(props: SandboxSelectableProps): ReactElement {
   return <WebSandboxSelectable {...props} />
 }
 
+function usePrefersReducedMotion(): boolean {
+  const [prefers, setPrefers] = useState(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  })
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+    const mql = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const handleChange = (): void => setPrefers(mql.matches)
+    mql.addEventListener('change', handleChange)
+    return () => mql.removeEventListener('change', handleChange)
+  }, [])
+
+  return prefers
+}
+
 function WebSandboxSelectable({ screenId, componentId, label, children }: SandboxSelectableProps): ReactElement {
   const { feedbackMode, highlightedComponentId, sendComponentSelected } = useSandbox()
   const isHighlighted = highlightedComponentId === componentId
+  const prefersReducedMotion = usePrefersReducedMotion()
+  const [pulseActive, setPulseActive] = useState(false)
+
+  useEffect(() => {
+    if (!isHighlighted) {
+      setPulseActive(false)
+      return
+    }
+    setPulseActive(true)
+    if (prefersReducedMotion) return // Statik kalır — otomatik sönmez, animasyon yok.
+    const timer = setTimeout(() => setPulseActive(false), HIGHLIGHT_PULSE_DURATION_MS)
+    return () => clearTimeout(timer)
+  }, [isHighlighted, prefersReducedMotion])
 
   const select = useCallback(
     (rect: { x: number; y: number; w: number; h: number }) => {
@@ -74,11 +113,11 @@ function WebSandboxSelectable({ screenId, componentId, label, children }: Sandbo
       aria-label={feedbackMode ? label : undefined}
       onClick={feedbackMode ? handleClick : undefined}
       onKeyDown={feedbackMode ? handleKeyDown : undefined}
-      style={
-        feedbackMode
-          ? { cursor: 'pointer', outline: isHighlighted ? '2px solid #6d5efc' : undefined }
-          : undefined
-      }
+      style={{
+        cursor: feedbackMode ? 'pointer' : undefined,
+        boxShadow: pulseActive ? '0 0 0 2px #6d5efc' : '0 0 0 2px rgba(109, 94, 252, 0)',
+        transition: prefersReducedMotion ? undefined : 'box-shadow 400ms ease-out'
+      }}
     >
       {children}
     </div>

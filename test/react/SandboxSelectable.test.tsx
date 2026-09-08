@@ -167,3 +167,100 @@ describe('SandboxSelectable (native no-op)', () => {
     expect((element.props as { children: unknown }).children).toBe('hello-native')
   })
 })
+
+describe('SandboxSelectable — feedback modundan bağımsız highlight (v0.3.2)', () => {
+  let postMessageSpy: ReturnType<typeof vi.fn>
+  let fakeParent: { postMessage: ReturnType<typeof vi.fn> }
+
+  beforeEach(() => {
+    postMessageSpy = vi.fn()
+    fakeParent = { postMessage: postMessageSpy }
+    vi.stubGlobal('parent', fakeParent)
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+  })
+
+  function dispatchHighlight(componentId: string): void {
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          origin: 'https://hello.tmobstudio.ai',
+          source: fakeParent as unknown as Window,
+          data: {
+            v: 1,
+            demoId: 'voltgo',
+            sessionId: 'sess-1',
+            msgId: 'm-hl',
+            ts: 2,
+            type: 'sandbox:highlight',
+            payload: { componentId }
+          }
+        })
+      )
+    })
+  }
+
+  function renderSelectable(): HTMLElement {
+    const { getByText } = render(
+      <SandboxProvider demoId="voltgo" allowedOrigins={['https://hello.tmobstudio.ai']} manifestDigest="d" screens={1}>
+        <SandboxSelectable screenId="scr-1" componentId="cmp-1" label="Fiyat kartı">
+          <button type="button">tıkla</button>
+        </SandboxSelectable>
+      </SandboxProvider>
+    )
+    return getByText('tıkla').parentElement as HTMLElement
+  }
+
+  it('feedback modu KAPALIYKEN de görsel vurgu verir; süre dolunca söner ama data-sb-highlighted kalır', () => {
+    vi.useFakeTimers()
+    const wrapper = renderSelectable()
+    dispatchInit(fakeParent, false)
+    dispatchHighlight('cmp-1')
+
+    expect(wrapper.getAttribute('data-sb-highlighted')).toBe('true')
+    expect(wrapper.getAttribute('role')).toBeNull() // tıklanabilirlik feedback moduna bağlı kalır
+    expect(wrapper.style.boxShadow).toMatch(/#6d5efc|rgb\(109, 94, 252\)/)
+    expect(wrapper.style.transition).toContain('box-shadow')
+
+    act(() => {
+      vi.advanceTimersByTime(1600)
+    })
+    expect(wrapper.style.boxShadow).toMatch(/rgba\(109, 94, 252, 0\)/)
+    expect(wrapper.getAttribute('data-sb-highlighted')).toBe('true')
+  })
+
+  it('başka bileşen vurgulanınca bu bileşenin vurgusu düşer', () => {
+    const wrapper = renderSelectable()
+    dispatchInit(fakeParent, false)
+    dispatchHighlight('cmp-1')
+    expect(wrapper.getAttribute('data-sb-highlighted')).toBe('true')
+    dispatchHighlight('cmp-2')
+    expect(wrapper.getAttribute('data-sb-highlighted')).toBeNull()
+    expect(wrapper.style.boxShadow).toMatch(/rgba\(109, 94, 252, 0\)/)
+  })
+
+  it('prefers-reduced-motion: vurgu animasyonsuz ve statik kalır (otomatik sönmez)', () => {
+    vi.useFakeTimers()
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockImplementation((query: string) => ({
+        matches: query.includes('reduce'),
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn()
+      }))
+    )
+    const wrapper = renderSelectable()
+    dispatchInit(fakeParent, false)
+    dispatchHighlight('cmp-1')
+
+    expect(wrapper.style.transition).toBe('')
+    act(() => {
+      vi.advanceTimersByTime(10_000)
+    })
+    expect(wrapper.style.boxShadow).toMatch(/#6d5efc|rgb\(109, 94, 252\)/)
+  })
+})
