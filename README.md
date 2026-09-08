@@ -16,19 +16,28 @@ tükettiği tek doğruluk kaynağıdır — protokolü veya kural setini kopyala
 
 ## Kurulum
 
-Demo repoları bu paketi git tag'li bağımlılık olarak tüketir:
+Demo repoları bu paketi **GitHub Release tarball'ı** olarak tüketir (önceden
+derlenmiş `dist/` içerir; Docker imajında git, `prepare` ya da devDependency
+kurulumu gerekmez — repo public olduğu için token da gerekmez):
 
 ```json
 {
   "dependencies": {
-    "@tmob/sandbox-bridge": "github:thinksmobility/sandbox-bridge#v0.1.0"
+    "@tmob/sandbox-bridge": "https://github.com/thinksmobility/sandbox-bridge/releases/download/v0.3.5/tmob-sandbox-bridge-0.3.5.tgz"
   }
 }
 ```
 
-Kurulum sonrası `prepare` script'i paketi build eder (git bağımlılıkları için
-standart mekanizma). **pnpm** kullanıyorsanız lifecycle script'lerin
-çalışması için gerekirse `pnpm approve-builds` ile onaylayın.
+Yeni sürüm çıkarma: `package.json` sürümünü artır → commit + `git tag vX.Y.Z` →
+`git push origin main --tags` → `npm run release:github` (`npm pack` + `gh release
+create` ile tarball'ı release'e ekler). Demolar URL'deki sürümü güncelleyip
+`npm install` / `pnpm add` ile geçer.
+
+Alternatif (yerel geliştirme): `"@tmob/sandbox-bridge": "file:../sandbox-bridge"` —
+npm symlink kurar; demoların `metro.config.js`'i bu durumu algılayıp
+`watchFolders`/symlink ayarlarını açar (tarball kurulumunda atlanır). Git tag
+bağımlılığı (`github:thinksmobility/sandbox-bridge#vX.Y.Z`) da çalışır ama
+kurulumda `prepare` (tsup) koşar; **pnpm**'de `pnpm approve-builds` gerekebilir.
 
 `react` **peer dependency**'dir (`>=18 <20`, opsiyonel) ve asla bundle
 edilmez — kendi `react`'inizi getirirsiniz, çift kopya/`Invalid hook call` riski oluşmaz.

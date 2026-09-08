@@ -9,9 +9,8 @@ const projectRoot = __dirname
 // bulamıyor — hem sembolik link takibini hem paket `exports` desteğini
 // açıkça etkinleştirip gerçek yolu `watchFolders`a eklemek gerekiyor.
 //
-// NOT: bridge'i gerçek kullanımda `github:thinksmobility/sandbox-bridge#vX.Y.Z`
-// etiketiyle kurarsanız (bkz. ana repo README'si) npm normal bir kopya
-// indirir — sembolik link OLMAZ, bu `watchFolders`/`unstable_enableSymlinks`
+// NOT: bridge'i gerçek kullanımda GitHub Release tarball'ı ile kurarsanız
+// (bkz. ana repo README'si "Kurulum") npm normal bir kopya indirir — sembolik link OLMAZ, bu `watchFolders`/`unstable_enableSymlinks`
 // ayarına GEREK KALMAZ (Metro paketi zaten kendi `node_modules` altında
 // normal bir dizin olarak bulur). Bu ayarlar yalnızca `file:../..` ile
 // YEREL geliştirme sırasında gereklidir.
