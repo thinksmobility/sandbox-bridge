@@ -23,3 +23,11 @@ repo README'sindeki F0 raporuna bakın.
 - `jest-expo` Expo SDK 54 ile eşleşecek şekilde `^54.0.18`'e sabitlendi (ilk kurulumda yanlışlıkla `^57.0.5` çekilmişti — `npm ls jest-expo expo` ile eşleştiğini doğrulayın).
 - Bağımlılık sürümleri `npx expo install --check` ile Expo SDK 54'e göre pinlendi (`react`/`react-dom` 19.1.0, `@types/react` `~19.1.10`, `@types/jest` 29.5.14) ve babel.config.js'in kullandığı ama devDependencies'te eksik olan `babel-preset-expo` eklendi. Bu şablonu kopyaladıktan sonra `npx expo install --check` çalıştırıp "Dependencies are up to date" çıktığını doğrulayın — SDK güncellendikçe bu sürümler yeniden kayabilir.
 - `metro.config.js` bridge kökünü `watchFolders`'a ekliyor (yalnız `file:../..` yerel geliştirmesinde) — bridge'in `jsdom`/`vitest`/`tsup`/`typescript`/`eslint` gibi geliştirme bağımlılıkları Metro'nun dosya izleyicisini bozabildiği için (`TreeFS: Could not add directory .../node_modules/jsdom`) dar bir `resolver.blockList` ile hariç tutulur; `react`/`react-dom`/`zod` (gerçek runtime bağımlılıkları) etkilenmez.
+
+## Çift React kopyası koruması
+
+`file:../..` ile yerel kurulumda Metro, bridge'in kendi `node_modules/react`'ini
+ikinci bir React olarak bundle'a alabilir (beyaz sayfa, `Cannot read properties
+of null (reading 'useMemo')`). `metro.config.js` `react`/`react-dom`/`scheduler`
+isteklerini uygulama kökünden çözer; `npm run check:single-react` (release
+zincirinde) bundle'daki React kopya işaretinin tam 1 olduğunu doğrular.

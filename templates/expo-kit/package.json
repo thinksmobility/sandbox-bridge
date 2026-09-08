@@ -8,7 +8,9 @@
     "build:web": "expo export -p web",
     "manifest:build": "node scripts/build-manifest.mjs",
     "test": "jest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:single-react": "node scripts/check-single-react.mjs",
+    "release": "npm run build:web && npm run check:single-react && npm run manifest:build && cp sandbox.manifest.json dist/"
   },
   "dependencies": {
     "@tmob/sandbox-bridge": "file:../..",

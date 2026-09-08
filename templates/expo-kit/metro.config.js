@@ -52,4 +52,28 @@ const existingBlockList = config.resolver.blockList
   : []
 config.resolver.blockList = [...existingBlockList, bridgeDevOnlyBlockList]
 
+// ÇİFT REACT KOPYASI (gerçek olay, 2026-09-08): `bridgeRoot` altındaki
+// `node_modules/react` — bridge'in KENDİ devDependency kopyası — Metro
+// tarafından ikinci bir React olarak bundle'a girer; bridge hook'ları ikinci
+// kopyanın null dispatcher'ında patlar (`Cannot read properties of null
+// (reading 'useMemo')`) → beyaz sayfa. Tek-kopya olması gereken paketler
+// origin ne olursa olsun UYGULAMA kökünden çözülür (hiyerarşik arama proje
+// kökündeki sanal bir origin'den başlatılır). `react-native`/`react-native-web`
+// bilinçli olarak listede DEĞİL — web'de `react-native` → `react-native-web`
+// takma adını Expo'nun kendi çözümleyicisi yapar. Koruma:
+// `scripts/check-single-react.mjs` (release zinciri, işaret === 1).
+const SINGLETON_PACKAGES = ['react', 'react-dom', 'scheduler']
+const projectOrigin = path.join(projectRoot, 'index.js')
+
+function isSingletonRequest(moduleName) {
+  return SINGLETON_PACKAGES.some((name) => moduleName === name || moduleName.startsWith(`${name}/`))
+}
+
+const upstreamResolveRequest = config.resolver.resolveRequest
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  const resolve = upstreamResolveRequest ?? context.resolveRequest
+  if (!isSingletonRequest(moduleName)) return resolve(context, moduleName, platform)
+  return resolve({ ...context, originModulePath: projectOrigin }, moduleName, platform)
+}
+
 module.exports = withNativeWind(config, { input: './global.css' })
