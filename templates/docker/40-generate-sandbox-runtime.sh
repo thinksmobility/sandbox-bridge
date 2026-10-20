@@ -7,11 +7,42 @@
 # çözer (gerçek olay: imaj `http://localhost:3000` ile üretime çıktı, köprü ölü
 # kaldı). Demo, index.html'e enjeksiyon GEREKTİRMEDEN kendi
 # `<script src="/sandbox-runtime.js">` etiketini ekler (bkz. ana repo README'si).
+#
+# Feedback project ids (UAT-19): one deployment is framed by both the
+# production and the staging portal, each with its own project id. Optional
+# `SANDBOX_FEEDBACK_PROJECT_IDS` (space or comma separated) becomes
+# `feedbackProjectIds` and REPLACES the app's built-in ids, so list every
+# portal's project. Unset, empty or only separators writes `null`: the app
+# keeps its built-in ids. This script never stops the container over this
+# value: carriage returns are stripped, and a list with any token other than
+# letters, digits, - and _ is ignored with a warning (`null`, built-in ids),
+# so the demo keeps running and production keeps its feedback tool.
+# `SANDBOX_RUNTIME_FILE` only redirects the output for tests.
 set -eu
+# No pathname expansion anywhere: env values are split into words below.
+set -f
 
-OUT_FILE="/usr/share/nginx/html/sandbox-runtime.js"
+OUT_FILE="${SANDBOX_RUNTIME_FILE:-/usr/share/nginx/html/sandbox-runtime.js}"
 ORIGINS="${SANDBOX_ALLOWED_ORIGINS:-}"
 DEMO_ID="${SANDBOX_DEMO_ID:-}"
+FEEDBACK_PROJECT_IDS="$(printf '%s' "${SANDBOX_FEEDBACK_PROJECT_IDS:-}" | tr -d '\r')"
+
+# `null` tells the app to use its built-in ids.
+FEEDBACK_IDS_JSON='null'
+feedback_ids=''
+feedback_ids_valid=1
+for id in $(printf '%s' "$FEEDBACK_PROJECT_IDS" | tr ',' ' '); do
+  if printf '%s' "$id" | LC_ALL=C grep -Eq '^[A-Za-z0-9_-]+$'; then
+    feedback_ids="$feedback_ids${feedback_ids:+,}\"$id\""
+  else
+    feedback_ids_valid=0
+  fi
+done
+if [ "$feedback_ids_valid" -eq 0 ]; then
+  echo "sandbox-runtime.js: WARNING: SANDBOX_FEEDBACK_PROJECT_IDS ignored (only letters, digits, - and _ separated by spaces or commas); the app keeps its built-in feedback project ids" >&2
+elif [ -n "$feedback_ids" ]; then
+  FEEDBACK_IDS_JSON="[$feedback_ids]"
+fi
 
 # Basit JSON string escape (backslash + çift tırnak) — origin'ler ve demo id
 # normalde bu karakterleri içermez, yine de güvenli tarafta kalınır.
@@ -45,10 +76,11 @@ build_origins_json() {
   printf 'window.__SANDBOX_RUNTIME__ = {\n'
   printf '  allowedOrigins: %s,\n' "$(build_origins_json)"
   if [ -n "$DEMO_ID" ]; then
-    printf '  demoId: "%s"\n' "$(json_escape "$DEMO_ID")"
+    printf '  demoId: "%s",\n' "$(json_escape "$DEMO_ID")"
   else
-    printf '  demoId: null\n'
+    printf '  demoId: null,\n'
   fi
+  printf '  feedbackProjectIds: %s\n' "$FEEDBACK_IDS_JSON"
   printf '};\n'
 } > "$OUT_FILE"
 
